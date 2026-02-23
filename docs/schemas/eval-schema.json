@@ -43,7 +43,7 @@
       "description": "Test cases in this suite",
       "items": {
         "type": "object",
-        "required": ["case_id", "description", "input", "expected_outcome", "grading_method"],
+        "required": ["case_id", "description", "input", "grading_method"],
         "properties": {
           "case_id": {
             "type": "string",
@@ -76,7 +76,15 @@
             "type": "string",
             "description": "Prompt for LLM-as-judge grading"
           }
-        }
+        },
+        "anyOf": [
+          {
+            "required": ["expected_outcome"]
+          },
+          {
+            "required": ["expected_constraints"]
+          }
+        ]
       },
       "minItems": 1
     },

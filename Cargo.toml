@@ -24,7 +24,7 @@ anyhow = "1.0"
 thiserror = "1.0"
 
 # HTTP client
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
 
 # Logging
 tracing = "0.1"
@@ -54,8 +54,8 @@ chrono = { version = "0.4", features = ["serde"] }
 # Regex
 regex = "1.10"
 
-# Terminal UI (future)
-# chromatui = { version = "0.1", optional = true }
+# Terminal UI foundation (pinned to upstream tip)
+chromatui = { git = "https://github.com/Ethical-AI-Syndicate/chromatui", rev = "db3bde36e3b32a5b81fb565473687e9323d79e32", optional = true }
 
 [build-dependencies]
 # Markdown parsing
@@ -89,8 +89,8 @@ tempfile = "3.13"
 proptest = "1.5"
 
 [features]
-default = []
-tui = []  # Future: Enable TUI features
+default = ["tui"]
+tui = ["dep:chromatui"]
 
 [[bin]]
 name = "chroma"

@@ -21,7 +21,7 @@ Official GitHub MCP server providing repository operations.
 
 ```yaml schema mcp-server
 name: github
-version: "1.0"
+version: "1.0.0"
 description: GitHub operations via MCP (issues, PRs, code search, repos)
 server_command: ["npx", "-y", "@modelcontextprotocol/server-github"]
 server_type: stdio
@@ -82,7 +82,7 @@ Context7 documentation retrieval MCP server.
 
 ```yaml schema mcp-server
 name: context7
-version: "1.0"
+version: "1.0.0"
 description: Retrieve up-to-date library documentation and code examples
 server_command: ["npx", "-y", "@context7/mcp-server"]
 server_type: stdio

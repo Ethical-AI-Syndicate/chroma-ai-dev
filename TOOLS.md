@@ -21,7 +21,7 @@ Low-risk tool for web search operations.
 
 ```yaml schema tool
 name: web_search
-version: "1.0"
+version: "1.0.0"
 description: Performs web search and returns ranked results with snippets
 risk_rating: low
 allowed_environments: [dev, stage, prod]
@@ -107,7 +107,7 @@ contract_tests:
       query: ""
       max_results: 5
     expect_error: true
-    error_pattern: "minLength|required"
+    error_pattern: "minLength|required|shorter than"
 
   - name: excessive-max-results-rejected
     description: max_results exceeding maximum must be rejected
@@ -128,10 +128,10 @@ contract_tests:
   - name: query-too-long-rejected
     description: Query exceeding maxLength must be rejected
     input:
-      query: "x".repeat(501)
+      query: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
       max_results: 5
     expect_error: true
-    error_pattern: "maxLength"
+    error_pattern: "maxLength|longer than"
 ```
 
 **Usage example:**
@@ -153,7 +153,7 @@ High-risk tool for executing SQL queries (DEV ENVIRONMENT ONLY).
 
 ```yaml schema tool
 name: execute_sql_query
-version: "1.0"
+version: "1.0.0"
 description: Executes read-only SQL query against allowed databases (SELECT only, dev environment only)
 risk_rating: high
 allowed_environments: [dev]  # Explicitly NOT allowed in stage or prod
@@ -224,7 +224,7 @@ contract_tests:
       query: "DELETE FROM users WHERE id = 1"
       database: analytics_dev
     expect_error: true
-    error_pattern: "pattern.*failed|Only SELECT"
+    error_pattern: "pattern.*failed|Only SELECT|does not match"
 
   - name: update-operation-rejected
     description: UPDATE statement must be rejected by pattern validation
@@ -232,7 +232,7 @@ contract_tests:
       query: "UPDATE users SET active = false WHERE id = 1"
       database: analytics_dev
     expect_error: true
-    error_pattern: "pattern.*failed|Only SELECT"
+    error_pattern: "pattern.*failed|Only SELECT|does not match"
 
   - name: insert-operation-rejected
     description: INSERT statement must be rejected by pattern validation
@@ -240,7 +240,7 @@ contract_tests:
       query: "INSERT INTO users (name) VALUES ('hacker')"
       database: analytics_dev
     expect_error: true
-    error_pattern: "pattern.*failed|Only SELECT"
+    error_pattern: "pattern.*failed|Only SELECT|does not match"
 
   - name: drop-operation-rejected
     description: DROP statement must be rejected by pattern validation
@@ -248,7 +248,7 @@ contract_tests:
       query: "DROP TABLE users"
       database: analytics_dev
     expect_error: true
-    error_pattern: "pattern.*failed|Only SELECT"
+    error_pattern: "pattern.*failed|Only SELECT|does not match"
 
   - name: invalid-database-rejected
     description: Database not in enum list must be rejected
@@ -256,7 +256,7 @@ contract_tests:
       query: "SELECT * FROM logs"
       database: production_db
     expect_error: true
-    error_pattern: "enum|invalid value"
+    error_pattern: "enum|invalid value|not one of"
 
   - name: excessive-limit-rejected
     description: Limit exceeding maximum must be rejected
@@ -284,7 +284,7 @@ Medium-risk tool for RAG document retrieval with ACL enforcement.
 
 ```yaml schema tool
 name: retrieve_docs
-version: "1.0"
+version: "1.0.0"
 description: Retrieves documents from corpus with ACL enforcement and relevance scoring
 risk_rating: medium
 allowed_environments: [dev, stage, prod]

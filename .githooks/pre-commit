@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "Running pre-commit schema validation..."
+
+cargo build
+cargo test schema_validation
+
+if ! git diff --quiet HEAD src/generated/; then
+  if ! git diff --cached --quiet src/generated/; then
+    echo "Generated code changes are staged"
+  else
+    echo "Generated code changed but is not staged"
+    echo "Run: git add src/generated/"
+    exit 1
+  fi
+fi
+
+echo "Pre-commit validation passed"

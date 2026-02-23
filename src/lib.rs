@@ -25,6 +25,7 @@
 //! Generation happens at build time via `build.rs`.
 
 pub mod generated;
+pub mod terminal_safety;
 
 /// Error types for ChromaAI Dev
 pub mod error {

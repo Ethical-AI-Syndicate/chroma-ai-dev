@@ -21,7 +21,7 @@ Default system prompt for ChromaAI Dev assistant with policy awareness.
 
 ```yaml schema prompt
 id: default-assistant
-version: "1.0"
+version: "1.0.0"
 type: system
 description: Default system prompt with identity binding and policy context
 template: |
@@ -102,7 +102,7 @@ Query template for RAG-enhanced responses with document context.
 
 ```yaml schema prompt
 id: rag-query
-version: "1.0"
+version: "1.0.0"
 type: user
 description: Query with retrieved document context and citation requirements
 template: |

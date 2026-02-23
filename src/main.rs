@@ -58,7 +58,10 @@ async fn main() -> Result<()> {
     match cli.command {
         Some(Commands::Login { provider }) => {
             println!("🔐 Initiating OIDC device flow...");
-            println!("Provider: {}", provider.unwrap_or_else(|| "default".to_string()));
+            println!(
+                "Provider: {}",
+                provider.unwrap_or_else(|| "default".to_string())
+            );
             println!("\n❌ Not implemented yet - see implementation plan Phase 0");
             Ok(())
         }

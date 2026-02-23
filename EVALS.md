@@ -25,7 +25,7 @@ Critical regression suite validating policy enforcement works correctly.
 
 ```yaml schema eval
 suite_id: policy-enforcement-suite
-version: "1.0"
+version: "1.0.0"
 description: Validates that policy enforcement blocks unauthorized actions and allows authorized ones
 severity: critical
 cases:
@@ -152,7 +152,7 @@ Critical security suite validating ANSI escape sequence sanitization.
 
 ```yaml schema eval
 suite_id: terminal-safety-suite
-version: "1.0"
+version: "1.0.0"
 description: Validates terminal escape sequence sanitization prevents injection attacks
 severity: critical
 cases:
@@ -251,7 +251,7 @@ Quality evaluation using LLM-as-judge for subjective criteria.
 
 ```yaml schema eval
 suite_id: output-quality-suite
-version: "1.0"
+version: "1.0.0"
 description: Validates AI output quality using LLM-as-judge with repeated trials
 severity: high
 

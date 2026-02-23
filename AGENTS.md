@@ -251,7 +251,7 @@ Default configuration for agent loops (can be overridden per workspace/environme
 
 ```yaml schema agent-config
 name: agent_loop_defaults
-version: "1.0"
+version: "1.0.0"
 description: Default agent loop control parameters
 max_steps: 10
 max_tool_calls: 20
@@ -355,7 +355,7 @@ The following schema defines agent-specific configuration that can be set per wo
 
 ```yaml schema agent-config
 name: workspace_agent_config_example
-version: "1.0"
+version: "1.0.0"
 description: Example workspace-specific agent configuration
 workspace_id: "workspace-123"
 environment: "prod"
@@ -432,7 +432,7 @@ For incident response, elevated permissions can be granted temporarily:
 
 ```yaml schema agent-config
 name: break_glass_config
-version: "1.0"
+version: "1.0.0"
 description: Break-glass elevated permissions for incident response
 break_glass: true
 reason_code: "incident-2024-02-23-auth-bypass"
@@ -507,7 +507,7 @@ Minimal permissions for production environment:
 
 ```yaml schema agent-config
 name: prod_strict_config
-version: "1.0"
+version: "1.0.0"
 workspace_id: "critical-app"
 environment: "prod"
 max_steps: 3
@@ -535,7 +535,7 @@ Generous limits for development/testing:
 
 ```yaml schema agent-config
 name: dev_permissive_config
-version: "1.0"
+version: "1.0.0"
 workspace_id: "experimental"
 environment: "dev"
 max_steps: 50

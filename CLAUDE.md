@@ -290,7 +290,7 @@ ChromaAI Dev integrates with Claude API (Anthropic) as a provider for LLM infere
 
 ```yaml schema claude-config
 name: claude_provider_config
-version: "1.0"
+version: "1.0.0"
 description: Claude API provider configuration for ChromaAI Dev
 provider_type: anthropic
 api_base_url: "https://api.anthropic.com/v1"
@@ -339,7 +339,7 @@ models:
     supports_prompt_caching: true
     supports_vision: false
     cost_per_input_token: 0.0000004
-    cost_per_output_tokens: 0.000002
+    cost_per_output_token: 0.000002
     cost_per_cached_input_token: 0.00000004
     recommended_for:
       - simple_tasks

@@ -138,6 +138,7 @@
   },
   "additionalProperties": false,
   "if": {
+    "required": ["break_glass"],
     "properties": {
       "break_glass": {
         "const": true
