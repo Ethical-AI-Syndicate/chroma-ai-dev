@@ -405,6 +405,416 @@ contract_tests:
 
 ---
 
+### http_request
+
+Medium-risk HTTP client for controlled API calls.
+
+```yaml schema tool
+name: http_request
+version: "1.0.0"
+description: Performs HTTP requests to allowlisted endpoints with method and timeout controls
+risk_rating: medium
+allowed_environments: [dev, stage]
+connector_binding: http_connector
+timeout_seconds: 20
+max_retries: 2
+
+input_schema:
+  type: object
+  properties:
+    method:
+      type: string
+      enum: [GET, POST, PUT, PATCH, DELETE]
+      description: HTTP method to execute
+    url:
+      type: string
+      format: uri
+      pattern: "^https://"
+      description: HTTPS URL target
+    headers:
+      type: object
+      description: Optional request headers
+      additionalProperties: {type: string}
+    body:
+      type: object
+      description: Optional JSON body for write methods
+      additionalProperties: true
+    timeout_ms:
+      type: integer
+      minimum: 100
+      maximum: 30000
+      default: 5000
+      description: Per-request timeout override
+  required: [method, url]
+
+output_schema:
+  type: object
+  properties:
+    status:
+      type: integer
+    headers:
+      type: object
+      additionalProperties: {type: string}
+    body:
+      type: object
+      additionalProperties: true
+    response_time_ms:
+      type: integer
+  required: [status, response_time_ms]
+
+error_behavior:
+  timeout: retry_with_backoff
+  network_error: retry_with_backoff
+  rate_limit: fail_with_message
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-get-request-schema
+    description: Valid GET request payload should pass validation
+    input:
+      method: GET
+      url: "https://api.example.com/health"
+    expect_success: true
+
+  - name: non-https-url-rejected
+    description: Non-HTTPS URL should fail schema validation
+    input:
+      method: GET
+      url: "http://api.example.com/health"
+    expect_error: true
+    error_pattern: "pattern|https"
+
+  - name: timeout-too-high-rejected
+    description: timeout_ms above max should fail validation
+    input:
+      method: GET
+      url: "https://api.example.com/health"
+      timeout_ms: 50000
+    expect_error: true
+    error_pattern: "maximum"
+```
+
+---
+
+### read_file
+
+Medium-risk tool for reading local files within approved workspace boundaries.
+
+```yaml schema tool
+name: read_file
+version: "1.0.0"
+description: Reads UTF-8 text files from allowlisted paths with size and line limits
+risk_rating: medium
+allowed_environments: [dev]
+connector_binding: filesystem_connector
+timeout_seconds: 10
+max_retries: 0
+
+input_schema:
+  type: object
+  properties:
+    path:
+      type: string
+      minLength: 1
+      maxLength: 500
+      pattern: "^(src|docs|tests|config)/"
+      description: Relative file path under approved directories
+    max_bytes:
+      type: integer
+      minimum: 1
+      maximum: 200000
+      default: 50000
+      description: Maximum bytes to read
+    offset_line:
+      type: integer
+      minimum: 1
+      maximum: 100000
+      default: 1
+      description: Line number offset for partial reads
+  required: [path]
+
+output_schema:
+  type: object
+  properties:
+    content:
+      type: string
+    bytes_read:
+      type: integer
+    truncated:
+      type: boolean
+  required: [content, bytes_read, truncated]
+
+error_behavior:
+  timeout: fail_immediately
+  acl_denial: fail_immediately
+
+policy_tags:
+  data_classification: confidential
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-source-file-path
+    description: Approved source path should pass schema checks
+    input:
+      path: "src/main.rs"
+      max_bytes: 1000
+    expect_success: true
+
+  - name: traversal-path-rejected
+    description: Parent directory traversal should be rejected by pattern
+    input:
+      path: "../secrets.txt"
+    expect_error: true
+    error_pattern: "pattern"
+
+  - name: max-bytes-too-large-rejected
+    description: max_bytes over limit should fail
+    input:
+      path: "docs/readme.md"
+      max_bytes: 999999
+    expect_error: true
+    error_pattern: "maximum"
+```
+
+---
+
+### write_file
+
+High-risk tool for controlled file writes in development only.
+
+```yaml schema tool
+name: write_file
+version: "1.0.0"
+description: Writes UTF-8 content to approved development paths with explicit overwrite controls
+risk_rating: high
+allowed_environments: [dev]
+connector_binding: filesystem_connector
+timeout_seconds: 10
+max_retries: 0
+requires_confirmation: true
+
+input_schema:
+  type: object
+  properties:
+    path:
+      type: string
+      minLength: 1
+      maxLength: 500
+      pattern: "^(tmp|docs|tests)/"
+      description: Relative output path under approved directories
+    content:
+      type: string
+      minLength: 1
+      maxLength: 100000
+      description: UTF-8 file content to write
+    overwrite:
+      type: boolean
+      default: false
+      description: Whether existing file may be overwritten
+  required: [path, content]
+
+output_schema:
+  type: object
+  properties:
+    path:
+      type: string
+    bytes_written:
+      type: integer
+    created:
+      type: boolean
+  required: [path, bytes_written, created]
+
+error_behavior:
+  timeout: fail_immediately
+  acl_denial: fail_immediately
+
+policy_tags:
+  data_classification: confidential
+  retention_class: NONE
+
+contract_tests:
+  - name: valid-write-request-schema
+    description: Write request with allowed path should pass schema validation
+    input:
+      path: "tmp/output.txt"
+      content: "hello world"
+      overwrite: false
+    expect_success: true
+
+  - name: disallowed-path-rejected
+    description: Write outside allowlisted directories must fail
+    input:
+      path: "src/main.rs"
+      content: "not allowed"
+    expect_error: true
+    error_pattern: "pattern"
+
+  - name: empty-content-rejected
+    description: Empty content must fail minLength validation
+    input:
+      path: "tmp/output.txt"
+      content: ""
+    expect_error: true
+    error_pattern: "minLength|shorter than"
+```
+
+---
+
+### parse_json
+
+Low-risk utility tool for JSON parsing and shape validation.
+
+```yaml schema tool
+name: parse_json
+version: "1.0.0"
+description: Parses JSON strings and returns normalized object output for downstream tool usage
+risk_rating: low
+allowed_environments: [dev, stage, prod]
+connector_binding: local_transform
+timeout_seconds: 5
+max_retries: 0
+
+input_schema:
+  type: object
+  properties:
+    text:
+      type: string
+      minLength: 2
+      maxLength: 200000
+      description: JSON text payload
+    strict:
+      type: boolean
+      default: true
+      description: Whether duplicate keys and trailing commas are rejected
+  required: [text]
+
+output_schema:
+  type: object
+  properties:
+    parsed:
+      type: object
+      additionalProperties: true
+    is_valid:
+      type: boolean
+    key_count:
+      type: integer
+  required: [parsed, is_valid, key_count]
+
+error_behavior:
+  timeout: fail_immediately
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-json-passes
+    description: Valid JSON payload should pass schema validation
+    input:
+      text: '{"status":"ok","count":2}'
+      strict: true
+    expect_success: true
+
+  - name: too-short-json-rejected
+    description: Too-short JSON text should fail minLength
+    input:
+      text: "{"
+    expect_error: true
+    error_pattern: "minLength|shorter than"
+
+  - name: malformed-json-shape-rejected
+    description: Non-object text payload that violates minLength should fail
+    input:
+      text: "x"
+      strict: true
+    expect_error: true
+    error_pattern: "minLength"
+```
+
+---
+
+### format_date
+
+Low-risk utility for deterministic date and time formatting.
+
+```yaml schema tool
+name: format_date
+version: "1.0.0"
+description: Formats timestamps into specified date-time output formats and time zones
+risk_rating: low
+allowed_environments: [dev, stage, prod]
+connector_binding: local_transform
+timeout_seconds: 5
+max_retries: 0
+
+input_schema:
+  type: object
+  properties:
+    timestamp:
+      type: string
+      format: date-time
+      description: ISO-8601 input timestamp
+    format:
+      type: string
+      enum: [rfc3339, iso_date, iso_datetime, unix_seconds]
+      description: Output format identifier
+    timezone:
+      type: string
+      pattern: "^(UTC|[A-Za-z_]+/[A-Za-z_]+)$"
+      default: UTC
+      description: IANA timezone or UTC
+  required: [timestamp, format]
+
+output_schema:
+  type: object
+  properties:
+    formatted:
+      type: string
+    timezone:
+      type: string
+    unix_seconds:
+      type: integer
+  required: [formatted, timezone]
+
+error_behavior:
+  timeout: fail_immediately
+
+policy_tags:
+  data_classification: public
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-format-request
+    description: Valid timestamp and format should pass schema validation
+    input:
+      timestamp: "2026-02-23T10:30:00Z"
+      format: rfc3339
+      timezone: UTC
+    expect_success: true
+
+  - name: invalid-format-enum-rejected
+    description: Unsupported output format should fail enum validation
+    input:
+      timestamp: "2026-02-23T10:30:00Z"
+      format: custom
+    expect_error: true
+    error_pattern: "enum|not one of"
+
+  - name: invalid-timezone-pattern-rejected
+    description: Invalid timezone identifier should fail pattern validation
+    input:
+      timestamp: "2026-02-23T10:30:00Z"
+      format: iso_date
+      timezone: "../../etc/passwd"
+    expect_error: true
+    error_pattern: "pattern"
+```
+
+---
+
 ## Tool Execution Flow
 
 ```

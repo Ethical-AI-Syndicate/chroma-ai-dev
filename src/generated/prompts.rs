@@ -7,14 +7,16 @@ pub const SCHEMAS_JSON: &str = "[\n  {\n    \"allowed_models\": [\n      \"claud
 static SCHEMAS: OnceLock<Vec<Value>> = OnceLock::new();
 
 pub fn all() -> &'static [Value] {
-SCHEMAS
-.get_or_init(|| serde_json::from_str(SCHEMAS_JSON).expect("generated prompt schemas must be valid json"))
-.as_slice()
+    SCHEMAS
+        .get_or_init(|| {
+            serde_json::from_str(SCHEMAS_JSON).expect("generated prompt schemas must be valid json")
+        })
+        .as_slice()
 }
 
 pub fn find_by_name_and_version(name: &str, version: &str) -> Option<&'static Value> {
-all().iter().find(|schema| {
-schema.get("id").and_then(Value::as_str) == Some(name)
-&& schema.get("version").and_then(Value::as_str) == Some(version)
-})
+    all().iter().find(|schema| {
+        schema.get("id").and_then(Value::as_str) == Some(name)
+            && schema.get("version").and_then(Value::as_str) == Some(version)
+    })
 }

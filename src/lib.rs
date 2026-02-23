@@ -26,6 +26,7 @@
 
 pub mod generated;
 pub mod terminal_safety;
+pub mod tools;
 
 /// Error types for ChromaAI Dev
 pub mod error {
@@ -70,4 +71,5 @@ pub use error::{ChromaError, Result};
 pub mod prelude {
     pub use crate::error::{ChromaError, Result};
     pub use crate::generated;
+    pub use crate::tools;
 }

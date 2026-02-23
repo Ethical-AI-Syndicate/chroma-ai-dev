@@ -1,72 +1,58 @@
-use chroma_ai_dev::generated::tools;
-use regex::Regex;
-use serde_json::Value;
+use chroma_ai_dev::tools::{run_contract_tests, validate_tool_input, ToolValidationError};
+use serde_json::json;
 
 #[test]
 fn tool_web_search_contract() {
-    run_tool_contracts("web_search");
+    run_tool_contracts("web_search", "1.0.0");
 }
 
 #[test]
 fn tool_execute_sql_query_contract() {
-    run_tool_contracts("execute_sql_query");
+    run_tool_contracts("execute_sql_query", "1.0.0");
 }
 
-fn run_tool_contracts(tool_name: &str) {
-    let schema = tools::all()
-        .iter()
-        .find(|schema| schema.get("name").and_then(Value::as_str) == Some(tool_name))
-        .expect("tool schema must exist");
+#[test]
+fn validation_error_contains_field_level_details() {
+    let input = json!({
+        "query": "",
+        "max_results": -10
+    });
 
-    let version = schema
-        .get("version")
-        .and_then(Value::as_str)
-        .expect("tool version required");
+    let error = validate_tool_input("web_search", "1.0.0", &input)
+        .expect_err("invalid input should produce schema validation error");
 
-    let contract_tests = schema
-        .get("contract_tests")
-        .and_then(Value::as_array)
-        .expect("tool contract_tests must exist");
-
-    for test_case in contract_tests {
-        let test_name = test_case
-            .get("name")
-            .and_then(Value::as_str)
-            .expect("test case must have name");
-        let input = test_case
-            .get("input")
-            .expect("test case must include input payload");
-
-        let expect_success = test_case
-            .get("expect_success")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-
-        let expect_error = test_case
-            .get("expect_error")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-
-        let result = tools::validate_tool_input(tool_name, version, input);
-
-        if expect_success {
-            assert!(
-                result.is_ok(),
-                "contract test '{test_name}' expected success but failed: {:?}",
-                result.err()
-            );
-            continue;
+    match error {
+        ToolValidationError::SchemaViolation { issues, .. } => {
+            assert!(!issues.is_empty(), "schema violation should include issues");
+            let joined = issues
+                .iter()
+                .map(|issue| issue.message.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
+            assert!(joined.contains("shorter than") || joined.contains("minimum"));
         }
-
-        if expect_error {
-            let error = result.expect_err("expected validation error").to_string();
-            if let Some(pattern) = test_case.get("error_pattern").and_then(Value::as_str) {
-                let regex = Regex::new(pattern).expect("error_pattern must be valid regex");
-                assert!(
-                    regex.is_match(&error),
-                    "contract test '{test_name}' did not match error pattern '{pattern}'. got: {error}"
-                );
-            }
-        }
+        other => panic!("unexpected error type: {other}"),
     }
+}
+
+fn run_tool_contracts(tool_name: &str, version: &str) {
+    let results = run_contract_tests(tool_name, version)
+        .expect("contract runner should return case results for known tool");
+
+    let failed = results
+        .iter()
+        .filter(|result| !result.passed)
+        .map(|result| format!("{} => {}", result.name, result.details))
+        .collect::<Vec<_>>();
+
+    assert!(
+        failed.is_empty(),
+        "contract test failures for {tool_name}@{version}: {}",
+        failed.join(" | ")
+    );
+
+    assert!(
+        !results.is_empty(),
+        "contract runner returned no tests for {tool_name}@{version}"
+    );
 }
