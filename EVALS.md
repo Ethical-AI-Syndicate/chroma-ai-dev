@@ -320,6 +320,115 @@ policy_tags:
   retention_class: STANDARD
 ```
 
+---
+
+### schema-registry-consistency-suite
+
+Deterministic checks for generated schema registry consistency.
+
+```yaml schema eval
+suite_id: schema-registry-consistency-suite
+version: "1.0.0"
+description: Validates schema registry loading and versioned lookups behave consistently
+severity: medium
+
+cases:
+  - case_id: tool-registry-non-empty
+    description: Tool registry should load at least one tool schema
+    input:
+      prompt_id: default-assistant
+      check: tools_all_len
+    expected_outcome:
+      type: success
+      min_count: 1
+    grading_method: deterministic
+
+  - case_id: prompt-registry-lookup
+    description: Prompt lookup should resolve default-assistant v1.0.0
+    input:
+      prompt_id: default-assistant
+      check: prompt_lookup
+      version: "1.0.0"
+    expected_outcome:
+      type: success
+      resolved: true
+    grading_method: deterministic
+
+thresholds:
+  pass_rate: 1.0
+  max_failures: 0
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
+---
+
+### incident-update-quality-suite
+
+LLM-as-judge suite for structured incident update quality.
+
+```yaml schema eval
+suite_id: incident-update-quality-suite
+version: "1.0.0"
+description: Evaluates clarity and actionability of incident response updates
+severity: high
+
+judge_config:
+  model: claude-sonnet-4-5
+  temperature: 0.0
+  repeat_trials: 3
+  variance_tolerance: 0.20
+  max_tokens: 1200
+
+cases:
+  - case_id: includes-owner-and-next-step
+    description: Incident update must include owner, impact, and next update timing
+    input:
+      prompt_id: incident-response-update
+      variables:
+        incident_id: INC-2026-0142
+        severity: sev2
+        status: investigating
+        impact_summary: "Users intermittently cannot authenticate via OIDC."
+        mitigations:
+          - "Scaled auth workers"
+          - "Enabled fallback provider"
+        next_update_eta_minutes: 30
+    expected_constraints:
+      - type: includes_fields
+        required:
+          - owner
+          - timeline
+          - impact
+          - next_update
+      - type: actionability
+        minimum_score: 0.8
+    grading_method: llm_judge
+    judge_prompt: |
+      Evaluate whether the incident update is operationally useful.
+
+      Criteria:
+      1) Includes clear owner and timeline
+      2) States user-facing impact
+      3) Includes specific next update timing
+
+      Respond with PASS or FAIL and one-sentence explanation.
+
+thresholds:
+  pass_rate: 0.85
+  max_failures: 1
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
 **LLM-as-judge grading logic:**
 ```rust
 async fn grade_with_llm_judge(

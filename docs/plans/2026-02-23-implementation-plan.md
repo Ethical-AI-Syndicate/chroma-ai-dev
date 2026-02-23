@@ -776,12 +776,12 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 - [x] Runtime validation working
 
 **Phase 2:**
-- [ ] 10+ prompt templates defined
+- [x] 10+ prompt templates defined
 - [x] Template rendering working
 - [x] Variable validation working
 
 **Phase 3:**
-- [ ] 5+ eval suites defined
+- [x] 5+ eval suites defined
 - [x] Deterministic eval runner working
 - [x] LLM-as-judge working
 - [x] Regression gating working
@@ -789,7 +789,7 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 **Phase 4:**
 - [x] Multi-version support working
 - [ ] Migration guides for all breaking changes
-- [ ] Deprecation warnings functional
+- [x] Deprecation warnings functional
 
 **Phase 5:**
 - [x] Complete authoring guide
@@ -811,14 +811,13 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 - [x] Phase 5: Authoring guide + schema linting + HTML docs generation
 
 **Next Steps:**
-1. Expand prompt catalog to 10+ templates (Phase 2 target completion)
-2. Expand eval catalog to 5+ suites (Phase 3 target completion)
-3. Add deprecation fixtures and migration docs per breaking schema changes (Phase 4 target completion)
-4. Validate CI run status on PR and mark CI metric complete when green in GitHub Actions
+1. Add migration guides for each future breaking schema release (Phase 4 hardening)
+2. Validate CI run status on PR and mark CI metric complete when green in GitHub Actions
+3. Decide whether to keep generated-file rustfmt in build.rs or replace with stable formatting strategy
 
 **Blockers:** None
 
 ---
 
 **Last Updated:** 2026-02-23
-**Next Review:** After prompt/eval catalog expansion and CI verification
+**Next Review:** After CI confirmation and migration-guide rollout policy is finalized

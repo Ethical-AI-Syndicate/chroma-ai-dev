@@ -470,6 +470,155 @@ allowed_models:
 
 ---
 
+### onboarding-checklist-generator
+
+System prompt to produce role-based onboarding checklists.
+
+```yaml schema prompt
+id: onboarding-checklist-generator
+version: "1.0.0"
+type: system
+description: Generates structured onboarding checklists with ownership and due dates
+template: |
+  Create an onboarding checklist for a {{role}} joining team {{team}}.
+
+  Constraints:
+  - Include exactly {{task_count}} tasks
+  - Group tasks by week
+  - Include owner and due date for each item
+
+  Return concise markdown bullets.
+
+variables:
+  role:
+    type: string
+    required: true
+    minLength: 2
+    maxLength: 100
+    description: Role title for onboarding checklist
+  team:
+    type: string
+    required: true
+    minLength: 2
+    maxLength: 100
+    description: Team name the new joiner belongs to
+  task_count:
+    type: integer
+    required: true
+    minimum: 3
+    maximum: 30
+    description: Number of checklist items required
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### deployment-summary
+
+User prompt for deployment summaries with incident-aware framing.
+
+```yaml schema prompt
+id: deployment-summary
+version: "1.0.0"
+type: user
+description: Summarizes deployment outcomes, risk status, and rollback readiness
+template: |
+  Summarize this deployment event.
+
+  Environment: {{environment}}
+  Service: {{service_name}}
+  Version: {{release_version}}
+  Duration Minutes: {{duration_minutes}}
+  Had Incidents: {{had_incident}}
+
+  Include:
+  1) Overall outcome
+  2) Risk posture
+  3) Recommended next action
+
+variables:
+  environment:
+    type: string
+    required: true
+    enum: [dev, stage, prod]
+    description: Deployment environment
+  service_name:
+    type: string
+    required: true
+    minLength: 2
+    maxLength: 100
+    description: Service name
+  release_version:
+    type: string
+    required: true
+    minLength: 3
+    maxLength: 50
+    description: Version identifier for release
+  duration_minutes:
+    type: integer
+    required: true
+    minimum: 1
+    maximum: 240
+    description: Deployment duration in minutes
+  had_incident:
+    type: boolean
+    required: true
+    description: Whether incidents occurred during deployment
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### legacy-assistant
+
+Deprecated prompt retained for backward compatibility and migration testing.
+
+```yaml schema prompt
+id: legacy-assistant
+version: "1.0.0"
+type: system
+description: Legacy assistant prompt maintained temporarily for migration compatibility
+template: |
+  You are the legacy assistant behavior profile.
+  Keep responses concise and include a migration notice.
+
+variables:
+  migration_notice:
+    type: string
+    required: true
+    minLength: 5
+    maxLength: 500
+    description: Notice shown to users when legacy prompt is selected
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+allowed_models:
+  - claude-sonnet-4-5
+
+deprecated: true
+deprecated_versions:
+  - "1.0.0"
+migration_guide: "docs/templates/schema-migration-guide.md"
+```
+
+---
+
 ## Prompt Rendering
 
 **Template engine:** Handlebars

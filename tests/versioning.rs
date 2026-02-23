@@ -64,10 +64,9 @@ fn versioned_prompt_render_accepts_latest() {
 
 #[test]
 fn warns_when_requested_version_is_deprecated() {
-    let resolved = resolve_version(SchemaKind::Tool, "web_search", "1.0.0")
+    let resolved = resolve_version(SchemaKind::Prompt, "legacy-assistant", "1.0.0")
         .expect("known version should resolve");
-    assert!(resolved.warnings.is_empty());
-    assert!(!resolved
+    assert!(resolved
         .warnings
         .iter()
         .any(|warning| matches!(warning, ResolutionWarning::DeprecatedVersion { .. })));

@@ -117,6 +117,24 @@ fn uniqueness_allows_same_id_across_versions() {
     assert_unique(&sample, "name");
 }
 
+#[test]
+fn prompt_schema_count_meets_phase2_target() {
+    assert!(
+        generated::prompts::all().len() >= 10,
+        "phase 2 target requires at least 10 prompt schemas; found {}",
+        generated::prompts::all().len()
+    );
+}
+
+#[test]
+fn eval_schema_count_meets_phase3_target() {
+    assert!(
+        generated::evals::all().len() >= 5,
+        "phase 3 target requires at least 5 eval suites; found {}",
+        generated::evals::all().len()
+    );
+}
+
 fn assert_unique(schemas: &[Value], id_field: &str) {
     let mut keys = HashSet::new();
     for schema in schemas {
