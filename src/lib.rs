@@ -25,6 +25,7 @@
 //! Generation happens at build time via `build.rs`.
 
 pub mod generated;
+pub mod prompts;
 pub mod terminal_safety;
 pub mod tools;
 
@@ -71,5 +72,6 @@ pub use error::{ChromaError, Result};
 pub mod prelude {
     pub use crate::error::{ChromaError, Result};
     pub use crate::generated;
+    pub use crate::prompts;
     pub use crate::tools;
 }
