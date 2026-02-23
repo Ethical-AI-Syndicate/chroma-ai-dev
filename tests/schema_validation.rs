@@ -135,6 +135,39 @@ fn eval_schema_count_meets_phase3_target() {
     );
 }
 
+#[test]
+fn advanced_agent_platform_schema_primitives_exist() {
+    for agent_name in [
+        "mode_single_shot_defaults",
+        "mode_multi_turn_defaults",
+        "orchestration_parallel_defaults",
+    ] {
+        assert!(
+            generated::agents::find_by_name_and_version(agent_name, "1.0.0").is_some(),
+            "missing agent config schema primitive: {agent_name}@1.0.0"
+        );
+    }
+
+    for tool_name in [
+        "agent_mail_register",
+        "agent_mail_send_message",
+        "agent_mail_check_inbox",
+        "agent_mail_reserve_file",
+    ] {
+        assert!(
+            generated::tools::find_by_name_and_version(tool_name, "1.0.0").is_some(),
+            "missing tool schema primitive: {tool_name}@1.0.0"
+        );
+    }
+
+    for suite_id in ["mode-routing-suite", "agent-mail-tool-contract-suite"] {
+        assert!(
+            generated::evals::find_by_name_and_version(suite_id, "1.0.0").is_some(),
+            "missing eval schema primitive: {suite_id}@1.0.0"
+        );
+    }
+}
+
 fn assert_unique(schemas: &[Value], id_field: &str) {
     let mut keys = HashSet::new();
     for schema in schemas {

@@ -473,6 +473,127 @@ async fn grade_with_llm_judge(
 
 ---
 
+### mode-routing-suite
+
+Deterministic suite validating mode-to-config routing invariants.
+
+```yaml schema eval
+suite_id: mode-routing-suite
+version: "1.0.0"
+description: Validates requested execution modes resolve to the expected agent config primitives
+severity: high
+
+cases:
+  - case_id: single-shot-resolves-single-shot-config
+    description: Single-shot mode should resolve mode_single_shot_defaults as active policy config
+    input:
+      requested_mode: single_shot
+      expected_agent_config: mode_single_shot_defaults
+      expected_version: "1.0.0"
+    expected_outcome:
+      type: success
+      matched: true
+    grading_method: deterministic
+
+  - case_id: multi-turn-resolves-multi-turn-config
+    description: Multi-turn mode should resolve mode_multi_turn_defaults for bounded conversation loops
+    input:
+      requested_mode: multi_turn
+      expected_agent_config: mode_multi_turn_defaults
+      expected_version: "1.0.0"
+    expected_outcome:
+      type: success
+      matched: true
+    grading_method: deterministic
+
+  - case_id: parallel-orchestration-resolves-orchestration-config
+    description: Parallel orchestration mode should resolve orchestration_parallel_defaults controls
+    input:
+      requested_mode: orchestrated_parallel
+      expected_agent_config: orchestration_parallel_defaults
+      expected_version: "1.0.0"
+    expected_outcome:
+      type: success
+      matched: true
+    grading_method: deterministic
+
+thresholds:
+  pass_rate: 1.0
+  max_failures: 0
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
+---
+
+### agent-mail-tool-contract-suite
+
+Deterministic suite validating schema-level contracts for agent-mail tools.
+
+```yaml schema eval
+suite_id: agent-mail-tool-contract-suite
+version: "1.0.0"
+description: Validates all agent-mail tool schema contracts are executable and regression-blocking
+severity: high
+
+cases:
+  - case_id: register-tool-contracts-load
+    description: agent_mail_register should expose at least one passing contract test case
+    input:
+      tool_name: agent_mail_register
+      expected_contract_tests_min: 1
+    expected_outcome:
+      type: success
+      contract_tests_loaded: true
+    grading_method: deterministic
+
+  - case_id: send-message-tool-contracts-load
+    description: agent_mail_send_message should expose at least one passing contract test case
+    input:
+      tool_name: agent_mail_send_message
+      expected_contract_tests_min: 1
+    expected_outcome:
+      type: success
+      contract_tests_loaded: true
+    grading_method: deterministic
+
+  - case_id: inbox-tool-contracts-load
+    description: agent_mail_check_inbox should expose at least one passing contract test case
+    input:
+      tool_name: agent_mail_check_inbox
+      expected_contract_tests_min: 1
+    expected_outcome:
+      type: success
+      contract_tests_loaded: true
+    grading_method: deterministic
+
+  - case_id: reservation-tool-contracts-load
+    description: agent_mail_reserve_file should expose at least one passing contract test case
+    input:
+      tool_name: agent_mail_reserve_file
+      expected_contract_tests_min: 1
+    expected_outcome:
+      type: success
+      contract_tests_loaded: true
+    grading_method: deterministic
+
+thresholds:
+  pass_rate: 1.0
+  max_failures: 0
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
+---
+
 ## Evaluation Execution
 
 **Running eval suites:**

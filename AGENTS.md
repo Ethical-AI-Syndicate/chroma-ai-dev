@@ -354,6 +354,77 @@ policy_tags:
 The following schema defines agent-specific configuration that can be set per workspace or environment:
 
 ```yaml schema agent-config
+name: mode_single_shot_defaults
+version: "1.0.0"
+description: Default limits for single-shot mode with no iterative tool loop
+max_steps: 1
+max_tool_calls: 2
+max_wall_time_seconds: 45
+max_cost_dollars: 0.05
+require_confirmation_for_high_risk: true
+allowed_models:
+  - claude-sonnet-4-5
+allowed_tools:
+  - web_search
+  - retrieve_docs
+forbidden_tools:
+  - execute_sql_query
+  - write_file
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+```
+
+```yaml schema agent-config
+name: mode_multi_turn_defaults
+version: "1.0.0"
+description: Default limits for conversational multi-turn mode with bounded iteration
+max_steps: 12
+max_tool_calls: 24
+max_wall_time_seconds: 420
+max_cost_dollars: 1.50
+require_confirmation_for_high_risk: true
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+allowed_tools:
+  - web_search
+  - retrieve_docs
+  - read_file
+forbidden_tools:
+  - execute_sql_query
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
+```yaml schema agent-config
+name: orchestration_parallel_defaults
+version: "1.0.0"
+description: Baseline controls for parallel orchestration runs with agent-mail coordination
+max_steps: 30
+max_tool_calls: 80
+max_wall_time_seconds: 900
+max_cost_dollars: 3.00
+require_confirmation_for_high_risk: true
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+allowed_tools:
+  - web_search
+  - retrieve_docs
+  - agent_mail_register
+  - agent_mail_send_message
+  - agent_mail_check_inbox
+  - agent_mail_reserve_file
+forbidden_tools:
+  - execute_sql_query
+policy_tags:
+  data_classification: confidential
+  retention_class: STANDARD
+```
+
+```yaml schema agent-config
 name: workspace_agent_config_example
 version: "1.0.0"
 description: Example workspace-specific agent configuration

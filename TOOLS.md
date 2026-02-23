@@ -964,6 +964,367 @@ contract_tests:
 
 ---
 
+### agent_mail_register
+
+Low-risk coordination tool for registering an agent mailbox identity.
+
+```yaml schema tool
+name: agent_mail_register
+version: "1.0.0"
+description: Registers an agent identity with the coordination mailbox service
+risk_rating: low
+allowed_environments: [dev, stage, prod]
+connector_binding: mcp_agent_mail_connector
+timeout_seconds: 10
+max_retries: 2
+
+input_schema:
+  type: object
+  properties:
+    agent_id:
+      type: string
+      minLength: 3
+      maxLength: 80
+      pattern: "^[a-z][a-z0-9_-]*$"
+      description: Unique agent identifier
+    display_name:
+      type: string
+      minLength: 1
+      maxLength: 120
+      description: Human-readable agent name
+    capabilities:
+      type: array
+      items: {type: string}
+      minItems: 1
+      description: Capability tags for routing
+  required: [agent_id, display_name]
+
+output_schema:
+  type: object
+  properties:
+    registered:
+      type: boolean
+    mailbox_id:
+      type: string
+    registered_at:
+      type: string
+      format: date-time
+  required: [registered, mailbox_id, registered_at]
+
+error_behavior:
+  network_error: retry_with_backoff
+  rate_limit: fail_with_message
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+
+contract_tests:
+  - name: valid-registration-payload
+    description: Valid registration payload should pass schema validation
+    input:
+      agent_id: planner_agent
+      display_name: Planner Agent
+      capabilities: [planning, decomposition]
+    expect_success: true
+
+  - name: invalid-agent-id-rejected
+    description: Agent identifiers with spaces should fail pattern validation
+    input:
+      agent_id: "planner agent"
+      display_name: Planner Agent
+    expect_error: true
+    error_pattern: "pattern|does not match"
+
+  - name: missing-display-name-rejected
+    description: Missing display name should fail required field validation
+    input:
+      agent_id: planner_agent
+    expect_error: true
+    error_pattern: "required"
+```
+
+---
+
+### agent_mail_send_message
+
+Medium-risk coordination tool for inter-agent messaging.
+
+```yaml schema tool
+name: agent_mail_send_message
+version: "1.0.0"
+description: Sends structured coordination messages to another registered agent
+risk_rating: medium
+allowed_environments: [dev, stage, prod]
+connector_binding: mcp_agent_mail_connector
+timeout_seconds: 15
+max_retries: 2
+
+input_schema:
+  type: object
+  properties:
+    from_agent_id:
+      type: string
+      minLength: 3
+      maxLength: 80
+      pattern: "^[a-z][a-z0-9_-]*$"
+      description: Sender agent identifier
+    to_agent_id:
+      type: string
+      minLength: 3
+      maxLength: 80
+      pattern: "^[a-z][a-z0-9_-]*$"
+      description: Recipient agent identifier
+    subject:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Message subject line
+    body:
+      type: string
+      minLength: 1
+      maxLength: 20000
+      description: Message payload
+    thread_id:
+      type: string
+      minLength: 1
+      maxLength: 120
+      description: Optional thread correlation id
+  required: [from_agent_id, to_agent_id, subject, body]
+
+output_schema:
+  type: object
+  properties:
+    message_id:
+      type: string
+    delivery_status:
+      type: string
+      enum: [queued, delivered]
+    queued_at:
+      type: string
+      format: date-time
+  required: [message_id, delivery_status, queued_at]
+
+error_behavior:
+  network_error: retry_with_backoff
+  rate_limit: retry_with_backoff
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+
+contract_tests:
+  - name: valid-send-message-request
+    description: Valid send message request should pass schema validation
+    input:
+      from_agent_id: planner_agent
+      to_agent_id: implementer_agent
+      subject: "Task assignment"
+      body: "Please implement task 1 from plan"
+      thread_id: thread-001
+    expect_success: true
+
+  - name: empty-body-rejected
+    description: Empty message body must fail minLength validation
+    input:
+      from_agent_id: planner_agent
+      to_agent_id: implementer_agent
+      subject: "Task assignment"
+      body: ""
+    expect_error: true
+    error_pattern: "minLength|shorter than"
+
+  - name: invalid-recipient-pattern-rejected
+    description: Recipient id with uppercase letters should fail pattern checks
+    input:
+      from_agent_id: planner_agent
+      to_agent_id: ImplementerAgent
+      subject: "Task assignment"
+      body: "hello"
+    expect_error: true
+    error_pattern: "pattern|does not match"
+```
+
+---
+
+### agent_mail_check_inbox
+
+Low-risk coordination tool for reading queued agent messages.
+
+```yaml schema tool
+name: agent_mail_check_inbox
+version: "1.0.0"
+description: Retrieves inbox messages for an agent with optional unread filtering
+risk_rating: low
+allowed_environments: [dev, stage, prod]
+connector_binding: mcp_agent_mail_connector
+timeout_seconds: 10
+max_retries: 2
+
+input_schema:
+  type: object
+  properties:
+    agent_id:
+      type: string
+      minLength: 3
+      maxLength: 80
+      pattern: "^[a-z][a-z0-9_-]*$"
+      description: Agent mailbox to retrieve
+    status:
+      type: string
+      enum: [unread, all]
+      default: unread
+      description: Message status filter
+    max_messages:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 20
+      description: Maximum messages to return
+  required: [agent_id]
+
+output_schema:
+  type: object
+  properties:
+    messages:
+      type: array
+      items:
+        type: object
+        properties:
+          message_id: {type: string}
+          from_agent_id: {type: string}
+          subject: {type: string}
+          body: {type: string}
+          created_at:
+            type: string
+            format: date-time
+        required: [message_id, from_agent_id, subject, body, created_at]
+    unread_count:
+      type: integer
+  required: [messages, unread_count]
+
+error_behavior:
+  network_error: retry_with_backoff
+  rate_limit: retry_with_backoff
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-inbox-read-request
+    description: Valid inbox read request should pass schema validation
+    input:
+      agent_id: implementer_agent
+      status: unread
+      max_messages: 25
+    expect_success: true
+
+  - name: excessive-max-messages-rejected
+    description: max_messages above limit should fail maximum validation
+    input:
+      agent_id: implementer_agent
+      max_messages: 1000
+    expect_error: true
+    error_pattern: "maximum"
+
+  - name: invalid-status-rejected
+    description: Unsupported status values should fail enum validation
+    input:
+      agent_id: implementer_agent
+      status: pending
+    expect_error: true
+    error_pattern: "enum|not one of"
+```
+
+---
+
+### agent_mail_reserve_file
+
+Medium-risk coordination tool for temporary file ownership reservations.
+
+```yaml schema tool
+name: agent_mail_reserve_file
+version: "1.0.0"
+description: Creates a time-bounded file reservation to prevent write collisions
+risk_rating: medium
+allowed_environments: [dev, stage]
+connector_binding: mcp_agent_mail_connector
+timeout_seconds: 10
+max_retries: 1
+
+input_schema:
+  type: object
+  properties:
+    agent_id:
+      type: string
+      minLength: 3
+      maxLength: 80
+      pattern: "^[a-z][a-z0-9_-]*$"
+      description: Agent creating the reservation
+    path:
+      type: string
+      minLength: 1
+      maxLength: 500
+      pattern: "^(src|docs|tests|config)/"
+      description: Workspace-relative file path to reserve
+    lease_seconds:
+      type: integer
+      minimum: 60
+      maximum: 7200
+      description: Reservation TTL in seconds
+  required: [agent_id, path, lease_seconds]
+
+output_schema:
+  type: object
+  properties:
+    reservation_id:
+      type: string
+    path:
+      type: string
+    expires_at:
+      type: string
+      format: date-time
+  required: [reservation_id, path, expires_at]
+
+error_behavior:
+  acl_denial: fail_immediately
+  network_error: retry_with_backoff
+
+policy_tags:
+  data_classification: confidential
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-file-reservation-request
+    description: Valid file reservation payload should pass schema validation
+    input:
+      agent_id: implementer_agent
+      path: "src/generated/tools.rs"
+      lease_seconds: 300
+    expect_success: true
+
+  - name: traversal-reservation-path-rejected
+    description: Traversal path should fail reservation path pattern validation
+    input:
+      agent_id: implementer_agent
+      path: "../secrets.txt"
+      lease_seconds: 300
+    expect_error: true
+    error_pattern: "pattern|does not match"
+
+  - name: lease-too-short-rejected
+    description: Lease values below minimum should fail schema validation
+    input:
+      agent_id: implementer_agent
+      path: "docs/plan.md"
+      lease_seconds: 10
+    expect_error: true
+    error_pattern: "minimum"
+```
+
+---
+
 ## Tool Execution Flow
 
 ```
