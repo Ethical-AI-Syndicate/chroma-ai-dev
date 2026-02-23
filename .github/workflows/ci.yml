@@ -1,0 +1,42 @@
+name: Schema Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Build (runs build.rs)
+        run: cargo build
+
+      - name: Run schema validation tests
+        run: cargo test schema_validation
+
+      - name: Run all tests
+        run: cargo test
+
+      - name: Check for generated code drift
+        run: |
+          if ! git diff --quiet src/generated/; then
+            echo "❌ Generated code is out of sync!"
+            echo "Run 'cargo build' locally and commit the changes."
+            git diff src/generated/
+            exit 1
+          fi
+
+      - name: Lint
+        run: cargo clippy -- -D warnings
+
+      - name: Format check
+        run: cargo fmt -- --check

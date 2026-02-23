@@ -1,10 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running pre-commit schema validation..."
+# Source cargo if available
+if [ -f "$HOME/.cargo/env" ]; then
+  source "$HOME/.cargo/env"
+elif command -v cargo &>/dev/null; then
+  :
+else
+  echo "❌ Cargo not found. Install Rust: https://rustup.rs/"
+  exit 1
+fi
 
-cargo build
-cargo test schema_validation
+echo "🔍 Running pre-commit schema validation..."
+
+cargo build || {
+    echo "❌ Schema validation failed!"
+    exit 1
+}
+
+cargo test schema_validation || {
+    echo "❌ Schema tests failed!"
+    exit 1
+}
 
 if ! git diff --quiet HEAD src/generated/; then
   if ! git diff --cached --quiet src/generated/; then
