@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev/schemas/mcp-server-schema.json",
+  "title": "MCP Server Schema",
+  "description": "JSON Schema for MCP server definitions in MCP_SERVERS.md",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "description",
+    "server_command",
+    "capabilities",
+    "risk_rating",
+    "allowed_environments"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique server identifier (lowercase, no spaces)",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of server's purpose",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "server_command": {
+      "type": "array",
+      "description": "Command to start the MCP server",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "server_type": {
+      "type": "string",
+      "description": "MCP transport type",
+      "enum": ["stdio", "http", "sse"],
+      "default": "stdio"
+    },
+    "environment_variables": {
+      "type": "object",
+      "description": "Required environment variables",
+      "patternProperties": {
+        "^[A-Z][A-Z0-9_]*$": {
+          "type": "string"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "description": "MCP capabilities provided by this server",
+      "items": {
+        "type": "string",
+        "enum": ["tools", "resources", "prompts"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "risk_rating": {
+      "type": "string",
+      "description": "Risk level for this server",
+      "enum": ["low", "medium", "high"]
+    },
+    "allowed_environments": {
+      "type": "array",
+      "description": "Environments where this server is permitted",
+      "items": {
+        "type": "string",
+        "enum": ["dev", "stage", "prod"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "description": "Server startup/command timeout in seconds",
+      "minimum": 1,
+      "maximum": 300
+    },
+    "max_retries": {
+      "type": "integer",
+      "description": "Maximum restart attempts on server crash",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "config_file": {
+      "type": "string",
+      "description": "Path to server-specific configuration file"
+    }
+  },
+  "additionalProperties": false
+}

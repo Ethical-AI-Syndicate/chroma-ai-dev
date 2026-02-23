@@ -1,0 +1,107 @@
+[package]
+name = "chroma-ai-dev"
+version = "0.1.0"
+edition = "2021"
+authors = ["ChromaAI Dev Team"]
+description = "Terminal-first AI development, evaluation, and release tool"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev"
+keywords = ["ai", "llm", "evaluation", "terminal", "tui"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.40", features = ["full"] }
+tokio-util = "0.7"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# JSON Schema validation
+jsonschema = "0.18"
+
+# Template engine (Handlebars)
+handlebars = "6.1"
+
+# Semver parsing
+semver = "1.0"
+
+# CLI argument parsing
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Configuration
+config = "0.14"
+
+# UUID generation
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Regex
+regex = "1.10"
+
+# Terminal UI (future)
+# chromatui = { version = "0.1", optional = true }
+
+[build-dependencies]
+# Markdown parsing
+pulldown-cmark = "0.12"
+
+# Serialization (for build.rs)
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+
+# JSON Schema validation (for build.rs)
+jsonschema = "0.18"
+
+# Code generation
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# Semver parsing (for build.rs)
+semver = "1.0"
+
+# File operations
+glob = "0.3"
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+mockito = "1.5"
+tempfile = "3.13"
+
+# Property-based testing
+proptest = "1.5"
+
+[features]
+default = []
+tui = []  # Future: Enable TUI features
+
+[[bin]]
+name = "chroma"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

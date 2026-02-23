@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev/schemas/prompt-schema.json",
+  "title": "Prompt Schema",
+  "description": "JSON Schema for prompt template definitions in PROMPTS.md",
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "type",
+    "description",
+    "template",
+    "variables",
+    "policy_tags",
+    "allowed_models"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique prompt identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "type": {
+      "type": "string",
+      "description": "Prompt type",
+      "enum": ["system", "user"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the prompt's purpose",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "template": {
+      "type": "string",
+      "description": "Handlebars template string",
+      "minLength": 1
+    },
+    "variables": {
+      "type": "object",
+      "description": "Variable definitions with types and constraints",
+      "patternProperties": {
+        "^[a-z][a-z0-9_]*$": {
+          "type": "object",
+          "required": ["type", "required", "description"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["string", "number", "integer", "boolean", "array", "object"]
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "description": {
+              "type": "string",
+              "minLength": 5
+            },
+            "enum": {
+              "type": "array",
+              "description": "Valid values for this variable"
+            },
+            "minLength": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxLength": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "minimum": {
+              "type": "number"
+            },
+            "maximum": {
+              "type": "number"
+            },
+            "items": {
+              "type": "object",
+              "description": "Schema for array items"
+            },
+            "properties": {
+              "type": "object",
+              "description": "Schema for object properties"
+            },
+            "format": {
+              "type": "string",
+              "description": "String format (e.g., date-time, email, uri)"
+            },
+            "default": {
+              "description": "Default value if not provided"
+            }
+          }
+        }
+      }
+    },
+    "policy_tags": {
+      "type": "object",
+      "description": "Policy metadata for governance",
+      "required": ["data_classification", "retention_class"],
+      "properties": {
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted", "varies"]
+        },
+        "retention_class": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "STANDARD", "LEGAL_HOLD"]
+        }
+      }
+    },
+    "allowed_models": {
+      "type": "array",
+      "description": "Models that can use this prompt",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "deprecated": {
+      "type": "boolean",
+      "description": "Whether this version is deprecated",
+      "default": false
+    },
+    "deprecated_versions": {
+      "type": "array",
+      "description": "List of deprecated versions",
+      "items": {
+        "type": "string",
+        "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      }
+    },
+    "migration_guide": {
+      "type": "string",
+      "description": "Path to migration guide for breaking changes"
+    }
+  },
+  "additionalProperties": false
+}

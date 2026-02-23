@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev/schemas/claude-config-schema.json",
+  "title": "Claude Provider Configuration Schema",
+  "description": "JSON Schema for Claude API provider configuration in CLAUDE.md",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "description",
+    "provider_type",
+    "api_base_url",
+    "models",
+    "routing_policy",
+    "rate_limits",
+    "policy_tags"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique configuration identifier",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10
+    },
+    "provider_type": {
+      "type": "string",
+      "const": "anthropic"
+    },
+    "api_base_url": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "authentication_method": {
+      "type": "string",
+      "enum": ["api_key", "oauth", "mtls"]
+    },
+    "api_key_source": {
+      "type": "string",
+      "description": "Where to retrieve API key (e.g., 'vault://secrets/anthropic-api-key')"
+    },
+    "models": {
+      "type": "array",
+      "description": "Model configurations",
+      "items": {
+        "type": "object",
+        "required": [
+          "model_id",
+          "display_name",
+          "context_window",
+          "max_output_tokens",
+          "supports_tools",
+          "supports_streaming",
+          "cost_per_input_token",
+          "cost_per_output_token"
+        ],
+        "properties": {
+          "model_id": {
+            "type": "string",
+            "pattern": "^claude-"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "context_window": {
+            "type": "integer",
+            "minimum": 1000
+          },
+          "max_output_tokens": {
+            "type": "integer",
+            "minimum": 100
+          },
+          "supports_tools": {
+            "type": "boolean"
+          },
+          "supports_streaming": {
+            "type": "boolean"
+          },
+          "supports_prompt_caching": {
+            "type": "boolean"
+          },
+          "supports_vision": {
+            "type": "boolean"
+          },
+          "cost_per_input_token": {
+            "type": "number",
+            "minimum": 0
+          },
+          "cost_per_output_token": {
+            "type": "number",
+            "minimum": 0
+          },
+          "cost_per_cached_input_token": {
+            "type": "number",
+            "minimum": 0
+          },
+          "recommended_for": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "routing_policy": {
+      "type": "object",
+      "required": ["default_model"],
+      "properties": {
+        "default_model": {
+          "type": "string"
+        },
+        "fallback_chain": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "retry_config": {
+          "type": "object",
+          "properties": {
+            "max_retries": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "backoff_multiplier": {
+              "type": "number",
+              "minimum": 1
+            },
+            "initial_delay_ms": {
+              "type": "integer",
+              "minimum": 100
+            },
+            "max_delay_ms": {
+              "type": "integer",
+              "minimum": 1000
+            }
+          }
+        }
+      }
+    },
+    "rate_limits": {
+      "type": "object",
+      "properties": {
+        "requests_per_minute": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "tokens_per_minute": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "concurrent_requests": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "circuit_breaker": {
+          "type": "object",
+          "properties": {
+            "error_threshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "timeout_seconds": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "half_open_requests": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "timeout_config": {
+      "type": "object",
+      "properties": {
+        "connect_timeout_ms": {
+          "type": "integer",
+          "minimum": 100
+        },
+        "request_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "streaming_timeout_ms": {
+          "type": "integer",
+          "minimum": 1000
+        }
+      }
+    },
+    "policy_tags": {
+      "type": "object",
+      "required": ["data_classification", "retention_class"],
+      "properties": {
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"]
+        },
+        "retention_class": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "STANDARD", "LEGAL_HOLD"]
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

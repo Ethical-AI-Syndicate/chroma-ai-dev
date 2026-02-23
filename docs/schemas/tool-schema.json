@@ -1,0 +1,201 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev/schemas/tool-schema.json",
+  "title": "Tool Schema",
+  "description": "JSON Schema for tool/function definitions in TOOLS.md",
+  "type": "object",
+  "required": [
+    "name",
+    "version",
+    "description",
+    "risk_rating",
+    "allowed_environments",
+    "input_schema",
+    "output_schema"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique tool identifier (snake_case)",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the tool does",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "risk_rating": {
+      "type": "string",
+      "description": "Risk level for this tool",
+      "enum": ["low", "medium", "high"]
+    },
+    "allowed_environments": {
+      "type": "array",
+      "description": "Environments where this tool is permitted",
+      "items": {
+        "type": "string",
+        "enum": ["dev", "stage", "prod"]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "connector_binding": {
+      "type": "string",
+      "description": "Connector implementation identifier",
+      "examples": ["http_connector", "postgres_connector", "chroma_retrieval_service"]
+    },
+    "timeout_seconds": {
+      "type": "integer",
+      "description": "Maximum execution time in seconds",
+      "minimum": 1,
+      "maximum": 3600
+    },
+    "max_retries": {
+      "type": "integer",
+      "description": "Maximum retry attempts on failure",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "requires_confirmation": {
+      "type": "boolean",
+      "description": "Whether to require user confirmation in interactive mode",
+      "default": false
+    },
+    "input_schema": {
+      "type": "object",
+      "description": "JSON Schema for tool input validation",
+      "required": ["type", "properties"],
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "description": "JSON Schema for tool output validation",
+      "required": ["type", "properties"],
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "error_behavior": {
+      "type": "object",
+      "description": "How to handle different error types",
+      "properties": {
+        "timeout": {
+          "type": "string",
+          "enum": ["fail_immediately", "return_empty_results", "return_partial_results", "retry_with_backoff"]
+        },
+        "network_error": {
+          "type": "string",
+          "enum": ["fail_immediately", "retry_with_backoff"]
+        },
+        "rate_limit": {
+          "type": "string",
+          "enum": ["fail_with_message", "retry_with_backoff", "queue_request"]
+        },
+        "acl_denial": {
+          "type": "string",
+          "enum": ["fail_immediately", "return_filtered_results"]
+        }
+      }
+    },
+    "policy_tags": {
+      "type": "object",
+      "description": "Policy metadata for governance",
+      "required": ["data_classification", "retention_class"],
+      "properties": {
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted", "varies"]
+        },
+        "retention_class": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "STANDARD", "LEGAL_HOLD"]
+        }
+      }
+    },
+    "contract_tests": {
+      "type": "array",
+      "description": "Contract tests for this tool",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "input"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10
+          },
+          "input": {
+            "type": "object"
+          },
+          "expect_success": {
+            "type": "boolean"
+          },
+          "expect_error": {
+            "type": "boolean"
+          },
+          "error_pattern": {
+            "type": "string",
+            "description": "Regex pattern to match in error message"
+          },
+          "expect_output": {
+            "type": "object",
+            "description": "Expected output constraints"
+          }
+        }
+      }
+    },
+    "deprecated": {
+      "type": "boolean",
+      "description": "Whether this version is deprecated",
+      "default": false
+    },
+    "deprecated_versions": {
+      "type": "array",
+      "description": "List of deprecated versions",
+      "items": {
+        "type": "string",
+        "pattern": "^\\d+\\.\\d+\\.\\d+$"
+      }
+    },
+    "migration_guide": {
+      "type": "string",
+      "description": "Path to migration guide for breaking changes"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev/schemas/agent-config-schema.json",
+  "title": "Agent Configuration Schema",
+  "description": "JSON Schema for agent runtime configuration in AGENTS.md",
+  "type": "object",
+  "required": [
+    "name",
+    "version"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique configuration identifier",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "workspace_id": {
+      "type": "string",
+      "description": "Workspace this config applies to"
+    },
+    "environment": {
+      "type": "string",
+      "description": "Environment this config applies to",
+      "enum": ["dev", "stage", "prod"]
+    },
+    "max_steps": {
+      "type": "integer",
+      "description": "Maximum number of reasoning steps",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "max_tool_calls": {
+      "type": "integer",
+      "description": "Maximum total tool invocations",
+      "minimum": 1,
+      "maximum": 200
+    },
+    "max_wall_time_seconds": {
+      "type": "integer",
+      "description": "Maximum execution time in seconds",
+      "minimum": 10,
+      "maximum": 7200
+    },
+    "max_cost_dollars": {
+      "type": "number",
+      "description": "Maximum spend in dollars",
+      "minimum": 0.01,
+      "maximum": 100
+    },
+    "require_confirmation_for_high_risk": {
+      "type": "boolean",
+      "description": "Require confirmation before calling high-risk tools",
+      "default": true
+    },
+    "allowed_models": {
+      "type": "array",
+      "description": "Models permitted in this configuration",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "allowed_tools": {
+      "type": "array",
+      "description": "Tools permitted (supports glob patterns like '*')",
+      "items": {
+        "type": "string"
+      }
+    },
+    "forbidden_tools": {
+      "type": "array",
+      "description": "Tools explicitly forbidden (takes precedence over allowed_tools)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "default_system_prompt_id": {
+      "type": "string",
+      "description": "Default system prompt to use",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "break_glass": {
+      "type": "boolean",
+      "description": "Whether this is a break-glass elevated configuration",
+      "default": false
+    },
+    "reason_code": {
+      "type": "string",
+      "description": "Reason for break-glass elevation (required if break_glass=true)"
+    },
+    "elevation_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When break-glass elevation expires (required if break_glass=true)"
+    },
+    "elevated_by": {
+      "type": "string",
+      "description": "Who granted elevation (required if break_glass=true)"
+    },
+    "override_policy_checks": {
+      "type": "array",
+      "description": "Policy checks to override (break-glass only)",
+      "items": {
+        "type": "string"
+      }
+    },
+    "audit_tag": {
+      "type": "string",
+      "description": "Tag for audit trail (e.g., 'BREAK_GLASS')"
+    },
+    "policy_tags": {
+      "type": "object",
+      "description": "Policy metadata for governance",
+      "properties": {
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"]
+        },
+        "retention_class": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "STANDARD", "LEGAL_HOLD"]
+        }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "break_glass": {
+        "const": true
+      }
+    }
+  },
+  "then": {
+    "required": ["reason_code", "elevation_expires_at", "elevated_by"]
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev/schemas/eval-schema.json",
+  "title": "Evaluation Suite Schema",
+  "description": "JSON Schema for evaluation suite definitions in EVALS.md",
+  "type": "object",
+  "required": [
+    "suite_id",
+    "version",
+    "description",
+    "severity",
+    "cases",
+    "thresholds",
+    "regression_blocking",
+    "policy_tags"
+  ],
+  "properties": {
+    "suite_id": {
+      "type": "string",
+      "description": "Unique suite identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what this suite tests",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "severity": {
+      "type": "string",
+      "description": "Severity level of failures",
+      "enum": ["critical", "high", "medium", "low"]
+    },
+    "cases": {
+      "type": "array",
+      "description": "Test cases in this suite",
+      "items": {
+        "type": "object",
+        "required": ["case_id", "description", "input", "expected_outcome", "grading_method"],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10
+          },
+          "input": {
+            "type": "object",
+            "description": "Test case input data"
+          },
+          "expected_outcome": {
+            "type": "object",
+            "description": "Expected outcome specification"
+          },
+          "expected_constraints": {
+            "type": "array",
+            "description": "Constraints for LLM-judge cases",
+            "items": {
+              "type": "object"
+            }
+          },
+          "grading_method": {
+            "type": "string",
+            "enum": ["deterministic", "llm_judge"]
+          },
+          "judge_prompt": {
+            "type": "string",
+            "description": "Prompt for LLM-as-judge grading"
+          }
+        }
+      },
+      "minItems": 1
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Pass/fail thresholds for the suite",
+      "required": ["pass_rate", "max_failures"],
+      "properties": {
+        "pass_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum pass rate (0.0-1.0)"
+        },
+        "max_failures": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum allowed failures"
+        }
+      }
+    },
+    "regression_blocking": {
+      "type": "boolean",
+      "description": "Whether failures block releases"
+    },
+    "judge_config": {
+      "type": "object",
+      "description": "Configuration for LLM-as-judge (required if any case uses llm_judge)",
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Model to use for judging"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "repeat_trials": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of trials to run"
+        },
+        "variance_tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Maximum acceptable variance between trials"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 4096
+        }
+      }
+    },
+    "policy_tags": {
+      "type": "object",
+      "description": "Policy metadata for governance",
+      "required": ["data_classification", "retention_class"],
+      "properties": {
+        "data_classification": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"]
+        },
+        "retention_class": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "STANDARD", "LEGAL_HOLD"]
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

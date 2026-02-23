@@ -1,0 +1,41 @@
+# Rust
+/target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Generated code (will be committed after Phase 0 completion)
+# Uncomment after build.rs is implemented and stable:
+# src/generated/*.rs
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local config
+.env
+.env.local
+config.local.*
+
+# Build artifacts
+dist/
+build/
+
+# Test coverage
+coverage/
+*.profraw
+*.profdata
+
+# Temporary files
+tmp/
+temp/
