@@ -1,14 +1,14 @@
 # AI Development Files - Implementation Plan
 
 **Date:** 2026-02-23
-**Status:** In Progress
+**Status:** In Progress (Phases 0-5 implemented, final expansion items pending)
 **Design Doc:** [2026-02-23-ai-development-files-design.md](./2026-02-23-ai-development-files-design.md)
 
 ---
 
 ## Implementation Phases
 
-### Phase 0: Bootstrap and Foundation (Current)
+### Phase 0: Bootstrap and Foundation (Completed)
 
 **Goal:** Create initial markdown files, basic validation infrastructure, and tests.
 
@@ -765,36 +765,36 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 
 **Phase 0:**
 - ✅ All 6 markdown files created
-- [ ] 100% schema validation coverage
-- [ ] All tests passing
+- [x] 100% schema validation coverage
+- [x] All tests passing
 - [ ] CI pipeline green
 - [ ] Zero manual validation needed
 
 **Phase 1:**
-- [ ] 10+ tool schemas defined
-- [ ] All contract tests passing
-- [ ] Runtime validation working
+- [x] 10+ tool schemas defined
+- [x] All contract tests passing
+- [x] Runtime validation working
 
 **Phase 2:**
 - [ ] 10+ prompt templates defined
-- [ ] Template rendering working
-- [ ] Variable validation working
+- [x] Template rendering working
+- [x] Variable validation working
 
 **Phase 3:**
 - [ ] 5+ eval suites defined
-- [ ] Deterministic eval runner working
-- [ ] LLM-as-judge working
-- [ ] Regression gating working
+- [x] Deterministic eval runner working
+- [x] LLM-as-judge working
+- [x] Regression gating working
 
 **Phase 4:**
-- [ ] Multi-version support working
+- [x] Multi-version support working
 - [ ] Migration guides for all breaking changes
 - [ ] Deprecation warnings functional
 
 **Phase 5:**
-- [ ] Complete authoring guide
-- [ ] Schema linting functional
-- [ ] HTML docs generated
+- [x] Complete authoring guide
+- [x] Schema linting functional
+- [x] HTML docs generated
 
 ---
 
@@ -803,16 +803,22 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 **Completed:**
 - [x] Design document
 - [x] Implementation plan
-- [x] Task 0.1: Bootstrap markdown files (in progress)
+- [x] Phase 0: Bootstrap and validation/codegen foundation
+- [x] Phase 1: Tool validation runtime + contract runner + expanded tool catalog
+- [x] Phase 2: Prompt rendering + variable validation + expanded prompt catalog
+- [x] Phase 3: Deterministic and LLM-judge eval runners + regression gating
+- [x] Phase 4: Version resolution and latest-aware runtime wrappers
+- [x] Phase 5: Authoring guide + schema linting + HTML docs generation
 
 **Next Steps:**
-1. Complete Task 0.1 (create all 6 markdown files)
-2. Start Task 0.2 (create meta-schemas)
-3. Start Task 0.8 (Cargo.toml setup)
+1. Expand prompt catalog to 10+ templates (Phase 2 target completion)
+2. Expand eval catalog to 5+ suites (Phase 3 target completion)
+3. Add deprecation fixtures and migration docs per breaking schema changes (Phase 4 target completion)
+4. Validate CI run status on PR and mark CI metric complete when green in GitHub Actions
 
 **Blockers:** None
 
 ---
 
 **Last Updated:** 2026-02-23
-**Next Review:** After Phase 0 completion
+**Next Review:** After prompt/eval catalog expansion and CI verification
