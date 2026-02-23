@@ -24,9 +24,11 @@
 //!
 //! Generation happens at build time via `build.rs`.
 
+pub mod docs_generation;
 pub mod evals;
 pub mod generated;
 pub mod prompts;
+pub mod schema_lint;
 pub mod terminal_safety;
 pub mod tools;
 pub mod versioning;
@@ -72,10 +74,12 @@ pub use error::{ChromaError, Result};
 
 /// Re-export commonly used types
 pub mod prelude {
+    pub use crate::docs_generation;
     pub use crate::error::{ChromaError, Result};
     pub use crate::evals;
     pub use crate::generated;
     pub use crate::prompts;
+    pub use crate::schema_lint;
     pub use crate::tools;
     pub use crate::versioning;
 }
