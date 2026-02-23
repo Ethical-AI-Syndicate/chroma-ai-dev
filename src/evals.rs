@@ -126,6 +126,11 @@ where
         .and_then(|config| config.get("repeat_trials"))
         .and_then(Value::as_u64)
         .unwrap_or(1) as usize;
+    let threshold_pass_rate = suite
+        .get("thresholds")
+        .and_then(|thresholds| thresholds.get("pass_rate"))
+        .and_then(Value::as_f64)
+        .unwrap_or(1.0);
 
     let mut reports = Vec::new();
     for case in cases {
@@ -158,14 +163,18 @@ where
             explanations.push(decision.explanation);
         }
 
-        let passed = trial_passes * 2 >= repeat_trials.max(1);
+        let trials = repeat_trials.max(1);
+        let trial_pass_rate = trial_passes as f64 / trials as f64;
+        let passed = trial_pass_rate >= threshold_pass_rate;
         reports.push(EvalCaseReport {
             case_id,
             passed,
             details: format!(
-                "llm judge passed {}/{} trials: {}",
+                "llm judge passed {}/{} trials (rate {:.2}, threshold {:.2}): {}",
                 trial_passes,
-                repeat_trials.max(1),
+                trials,
+                trial_pass_rate,
+                threshold_pass_rate,
                 explanations.join(" | ")
             ),
         });

@@ -191,7 +191,7 @@ fn validate_schema_block(
 }
 
 fn check_unique_ids(schemas: &[SchemaBlock]) -> Result<(), String> {
-    let mut seen = HashMap::<String, (String, usize)>::new();
+    let mut seen = HashMap::<(String, String), (String, usize)>::new();
 
     for schema in schemas {
         let schema_value: Value = serde_yaml::from_str(&schema.content).map_err(|err| {
@@ -213,17 +213,25 @@ fn check_unique_ids(schemas: &[SchemaBlock]) -> Result<(), String> {
                 )
             })?;
 
-        if let Some((prev_file, prev_line)) = seen.get(id) {
+        let version = schema_value
+            .get("version")
+            .and_then(Value::as_str)
+            .ok_or_else(|| {
+                format!(
+                    "{}:{}: schema missing version field",
+                    schema.source_file, schema.line_number
+                )
+            })?;
+
+        let key = (id.to_string(), version.to_string());
+        if let Some((prev_file, prev_line)) = seen.get(&key) {
             return Err(format!(
-                "{}:{}: duplicate id '{id}' (already defined at {prev_file}:{prev_line})",
+                "{}:{}: duplicate id+version pair '{id}@{version}' (already defined at {prev_file}:{prev_line})",
                 schema.source_file, schema.line_number
             ));
         }
 
-        seen.insert(
-            id.to_string(),
-            (schema.source_file.clone(), schema.line_number),
-        );
+        seen.insert(key, (schema.source_file.clone(), schema.line_number));
     }
 
     Ok(())

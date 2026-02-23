@@ -73,6 +73,37 @@ fn llm_judge_suite_respects_thresholds_and_repeats() {
 }
 
 #[test]
+fn llm_judge_suite_fails_when_trial_pass_rate_below_threshold() {
+    let report = run_llm_judge_suite(
+        "output-quality-suite",
+        "1.0.0",
+        &HashMap::from([(
+            "summarization-accuracy-and-brevity".to_string(),
+            "summary text".to_string(),
+        )]),
+        |_case_id, trial, _prompt, _output| {
+            if trial < 2 {
+                LlmJudgeDecision {
+                    passed: true,
+                    explanation: "passes checks".to_string(),
+                }
+            } else {
+                LlmJudgeDecision {
+                    passed: false,
+                    explanation: "fails checks".to_string(),
+                }
+            }
+        },
+    )
+    .expect("llm judge execution should succeed");
+
+    assert!(
+        !report.passed,
+        "suite should fail because 2/3 trial pass rate is below threshold 0.90"
+    );
+}
+
+#[test]
 fn unknown_suite_returns_error() {
     let report = run_deterministic_suite("missing-suite", "1.0.0", &HashMap::new());
     match report {

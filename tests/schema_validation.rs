@@ -107,14 +107,33 @@ fn tool_schema_count_meets_phase1_target() {
     );
 }
 
+#[test]
+fn uniqueness_allows_same_id_across_versions() {
+    let sample = vec![
+        serde_json::json!({"name": "demo", "version": "1.0.0"}),
+        serde_json::json!({"name": "demo", "version": "1.1.0"}),
+    ];
+
+    assert_unique(&sample, "name");
+}
+
 fn assert_unique(schemas: &[Value], id_field: &str) {
-    let mut ids = HashSet::new();
+    let mut keys = HashSet::new();
     for schema in schemas {
         let id = schema
             .get(id_field)
             .and_then(Value::as_str)
             .expect("schema must include identifier field")
             .to_string();
-        assert!(ids.insert(id.clone()), "duplicate schema id: {id}");
+        let version = schema
+            .get("version")
+            .and_then(Value::as_str)
+            .expect("schema must include version field")
+            .to_string();
+        let key = (id.clone(), version.clone());
+        assert!(
+            keys.insert(key),
+            "duplicate schema id+version pair: {id}@{version}"
+        );
     }
 }
