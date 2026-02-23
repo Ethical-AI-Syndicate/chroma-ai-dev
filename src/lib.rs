@@ -24,10 +24,12 @@
 //!
 //! Generation happens at build time via `build.rs`.
 
+pub mod evals;
 pub mod generated;
 pub mod prompts;
 pub mod terminal_safety;
 pub mod tools;
+pub mod versioning;
 
 /// Error types for ChromaAI Dev
 pub mod error {
@@ -71,7 +73,9 @@ pub use error::{ChromaError, Result};
 /// Re-export commonly used types
 pub mod prelude {
     pub use crate::error::{ChromaError, Result};
+    pub use crate::evals;
     pub use crate::generated;
     pub use crate::prompts;
     pub use crate::tools;
+    pub use crate::versioning;
 }
