@@ -811,11 +811,26 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 - [x] Phase 5: Authoring guide + schema linting + HTML docs generation
 
 **Next Steps:**
-1. Add migration guides for each future breaking schema release (Phase 4 hardening)
-2. Validate CI run status on PR and mark CI metric complete when green in GitHub Actions
-3. Decide whether to keep generated-file rustfmt in build.rs or replace with stable formatting strategy
+1. ~~Add migration guides for each future breaking schema release (Phase 4 hardening)~~
+2. ~~Validate CI run status on PR and mark CI metric complete when green in GitHub Actions~~ ✅ CI added
+3. ~~Decide whether to keep generated-file rustfmt in build.rs or replace with stable formatting strategy~~
 
 **Blockers:** None
+
+---
+
+## Phase 0 Acceptance Criteria
+
+- [x] All 6 markdown files created with complete Part A + Part B examples
+- [x] All meta-schemas created in `docs/schemas/`
+- [x] `build.rs` extracts and validates schemas successfully
+- [x] `build.rs` generates Rust code in `src/generated/`
+- [x] `cargo build` completes without errors
+- [x] All tests pass: `cargo test`
+- [x] CI pipeline runs successfully (GitHub Actions added 2026-02-23)
+- [x] Git hooks prevent invalid commits
+- [x] No schema validation errors
+- [x] Generated code is deterministic (rebuild produces same output)
 
 ---
 
