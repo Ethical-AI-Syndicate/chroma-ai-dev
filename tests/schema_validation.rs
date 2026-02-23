@@ -98,14 +98,60 @@ fn policy_tags_valid() {
     }
 }
 
+#[test]
+fn tool_schema_count_meets_phase1_target() {
+    assert!(
+        generated::tools::all().len() >= 10,
+        "phase 1 target requires at least 10 tool schemas; found {}",
+        generated::tools::all().len()
+    );
+}
+
+#[test]
+fn uniqueness_allows_same_id_across_versions() {
+    let sample = vec![
+        serde_json::json!({"name": "demo", "version": "1.0.0"}),
+        serde_json::json!({"name": "demo", "version": "1.1.0"}),
+    ];
+
+    assert_unique(&sample, "name");
+}
+
+#[test]
+fn prompt_schema_count_meets_phase2_target() {
+    assert!(
+        generated::prompts::all().len() >= 10,
+        "phase 2 target requires at least 10 prompt schemas; found {}",
+        generated::prompts::all().len()
+    );
+}
+
+#[test]
+fn eval_schema_count_meets_phase3_target() {
+    assert!(
+        generated::evals::all().len() >= 5,
+        "phase 3 target requires at least 5 eval suites; found {}",
+        generated::evals::all().len()
+    );
+}
+
 fn assert_unique(schemas: &[Value], id_field: &str) {
-    let mut ids = HashSet::new();
+    let mut keys = HashSet::new();
     for schema in schemas {
         let id = schema
             .get(id_field)
             .and_then(Value::as_str)
             .expect("schema must include identifier field")
             .to_string();
-        assert!(ids.insert(id.clone()), "duplicate schema id: {id}");
+        let version = schema
+            .get("version")
+            .and_then(Value::as_str)
+            .expect("schema must include version field")
+            .to_string();
+        let key = (id.clone(), version.clone());
+        assert!(
+            keys.insert(key),
+            "duplicate schema id+version pair: {id}@{version}"
+        );
     }
 }

@@ -183,6 +183,442 @@ allowed_models:
 
 ---
 
+### code-review-assistant
+
+System prompt for structured, policy-aware code review responses.
+
+```yaml schema prompt
+id: code-review-assistant
+version: "1.0.0"
+type: system
+description: System prompt for review mode with security, correctness, and audit focus
+template: |
+  You are operating in code review mode for ChromaAI Dev.
+
+  **Review Scope:** {{review_scope}}
+  **Repository:** {{repository}}
+  **Branch:** {{branch}}
+  **Severity Threshold:** {{severity_threshold}}
+
+  **Review priorities:**
+  1. Security defects and policy violations
+  2. Correctness and edge-case handling
+  3. Reliability and error propagation
+  4. Tests and validation coverage
+
+  Return findings as:
+  - severity
+  - file path
+  - issue
+  - recommendation
+
+variables:
+  review_scope:
+    type: string
+    required: true
+    description: Scope description of files or components under review
+  repository:
+    type: string
+    required: true
+    description: Repository identifier
+  branch:
+    type: string
+    required: true
+    description: Branch under review
+  severity_threshold:
+    type: string
+    enum: [critical, high, medium, low]
+    required: true
+    description: Minimum severity to include in report
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### summarize-with-constraints
+
+User prompt for constrained summary output.
+
+```yaml schema prompt
+id: summarize-with-constraints
+version: "1.0.0"
+type: user
+description: Summarization prompt with explicit length and format constraints
+template: |
+  Summarize the text below.
+
+  **Input Text:**
+  {{text}}
+
+  **Constraints:**
+  - Maximum words: {{max_words}}
+  - Tone: {{tone}}
+  - Include bullet points: {{include_bullets}}
+
+  Ensure all key points are preserved.
+
+variables:
+  text:
+    type: string
+    required: true
+    minLength: 1
+    maxLength: 20000
+    description: Text to summarize
+  max_words:
+    type: integer
+    required: true
+    minimum: 20
+    maximum: 500
+    description: Maximum allowed words in summary
+  tone:
+    type: string
+    required: true
+    enum: [neutral, technical, executive]
+    description: Desired output tone
+  include_bullets:
+    type: boolean
+    required: true
+    description: Whether output should be bullet-based
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### extract-entities
+
+User prompt for deterministic entity extraction.
+
+```yaml schema prompt
+id: extract-entities
+version: "1.0.0"
+type: user
+description: Extracts typed entities from text and returns normalized JSON output
+template: |
+  Extract the entities from the text below.
+
+  **Text:**
+  {{text}}
+
+  **Entity Types to Extract:**
+  {{#each entity_types}}- {{this}}
+  {{/each}}
+
+  Return strict JSON with keys: type, value, confidence, evidence.
+
+variables:
+  text:
+    type: string
+    required: true
+    minLength: 1
+    maxLength: 20000
+    description: Source text for extraction
+  entity_types:
+    type: array
+    required: true
+    minItems: 1
+    maxItems: 20
+    items: {type: string}
+    description: Entity categories to extract
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### chain-of-thought-reasoning
+
+User prompt for stepwise reasoning with concise final answer.
+
+```yaml schema prompt
+id: chain-of-thought-reasoning
+version: "1.0.0"
+type: user
+description: Structured reasoning prompt for complex tasks with explicit final answer block
+template: |
+  Solve the problem below using explicit reasoning steps.
+
+  **Problem:**
+  {{problem_statement}}
+
+  **Constraints:**
+  - Maximum reasoning steps: {{max_steps}}
+  - Include verification: {{include_verification}}
+
+  Return:
+  1. Reasoning steps
+  2. Final answer in a dedicated section
+
+variables:
+  problem_statement:
+    type: string
+    required: true
+    minLength: 1
+    maxLength: 10000
+    description: Problem statement requiring structured reasoning
+  max_steps:
+    type: integer
+    required: true
+    minimum: 1
+    maximum: 20
+    description: Maximum number of reasoning steps
+  include_verification:
+    type: boolean
+    required: true
+    description: Whether to include an explicit verification step
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### incident-response-update
+
+User prompt for incident response summaries with compliance fields.
+
+```yaml schema prompt
+id: incident-response-update
+version: "1.0.0"
+type: user
+description: Produces incident status updates including impact, mitigations, and next actions
+template: |
+  Generate an incident response update.
+
+  **Incident ID:** {{incident_id}}
+  **Severity:** {{severity}}
+  **Current Status:** {{status}}
+
+  **Observed Impact:**
+  {{impact_summary}}
+
+  **Mitigations Applied:**
+  {{#each mitigations}}- {{this}}
+  {{/each}}
+
+  **Next Update ETA (minutes):** {{next_update_eta_minutes}}
+
+  Include clear owner, timeline, and user-facing impact statement.
+
+variables:
+  incident_id:
+    type: string
+    required: true
+    description: Unique incident identifier
+  severity:
+    type: string
+    required: true
+    enum: [sev1, sev2, sev3, sev4]
+    description: Incident severity classification
+  status:
+    type: string
+    required: true
+    enum: [investigating, identified, monitoring, resolved]
+    description: Current incident lifecycle status
+  impact_summary:
+    type: string
+    required: true
+    minLength: 1
+    maxLength: 4000
+    description: Summary of customer/system impact
+  mitigations:
+    type: array
+    required: true
+    minItems: 0
+    maxItems: 20
+    items: {type: string}
+    description: List of mitigation actions already applied
+  next_update_eta_minutes:
+    type: integer
+    required: true
+    minimum: 1
+    maximum: 240
+    description: Minutes until next planned status update
+
+policy_tags:
+  data_classification: confidential
+  retention_class: STANDARD
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### onboarding-checklist-generator
+
+System prompt to produce role-based onboarding checklists.
+
+```yaml schema prompt
+id: onboarding-checklist-generator
+version: "1.0.0"
+type: system
+description: Generates structured onboarding checklists with ownership and due dates
+template: |
+  Create an onboarding checklist for a {{role}} joining team {{team}}.
+
+  Constraints:
+  - Include exactly {{task_count}} tasks
+  - Group tasks by week
+  - Include owner and due date for each item
+
+  Return concise markdown bullets.
+
+variables:
+  role:
+    type: string
+    required: true
+    minLength: 2
+    maxLength: 100
+    description: Role title for onboarding checklist
+  team:
+    type: string
+    required: true
+    minLength: 2
+    maxLength: 100
+    description: Team name the new joiner belongs to
+  task_count:
+    type: integer
+    required: true
+    minimum: 3
+    maximum: 30
+    description: Number of checklist items required
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### deployment-summary
+
+User prompt for deployment summaries with incident-aware framing.
+
+```yaml schema prompt
+id: deployment-summary
+version: "1.0.0"
+type: user
+description: Summarizes deployment outcomes, risk status, and rollback readiness
+template: |
+  Summarize this deployment event.
+
+  Environment: {{environment}}
+  Service: {{service_name}}
+  Version: {{release_version}}
+  Duration Minutes: {{duration_minutes}}
+  Had Incidents: {{had_incident}}
+
+  Include:
+  1) Overall outcome
+  2) Risk posture
+  3) Recommended next action
+
+variables:
+  environment:
+    type: string
+    required: true
+    enum: [dev, stage, prod]
+    description: Deployment environment
+  service_name:
+    type: string
+    required: true
+    minLength: 2
+    maxLength: 100
+    description: Service name
+  release_version:
+    type: string
+    required: true
+    minLength: 3
+    maxLength: 50
+    description: Version identifier for release
+  duration_minutes:
+    type: integer
+    required: true
+    minimum: 1
+    maximum: 240
+    description: Deployment duration in minutes
+  had_incident:
+    type: boolean
+    required: true
+    description: Whether incidents occurred during deployment
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+
+allowed_models:
+  - claude-sonnet-4-5
+  - claude-opus-4-5
+```
+
+---
+
+### legacy-assistant
+
+Deprecated prompt retained for backward compatibility and migration testing.
+
+```yaml schema prompt
+id: legacy-assistant
+version: "1.0.0"
+type: system
+description: Legacy assistant prompt maintained temporarily for migration compatibility
+template: |
+  You are the legacy assistant behavior profile.
+  Keep responses concise and include a migration notice.
+
+variables:
+  migration_notice:
+    type: string
+    required: true
+    minLength: 5
+    maxLength: 500
+    description: Notice shown to users when legacy prompt is selected
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+allowed_models:
+  - claude-sonnet-4-5
+
+deprecated: true
+deprecated_versions:
+  - "1.0.0"
+migration_guide: "docs/templates/schema-migration-guide.md"
+```
+
+---
+
 ## Prompt Rendering
 
 **Template engine:** Handlebars
