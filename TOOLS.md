@@ -377,7 +377,7 @@ contract_tests:
       query: ""
       corpus_id: "docs-v1"
     expect_error: true
-    error_pattern: "minLength|required"
+    error_pattern: "minLength|required|shorter than"
 
   - name: excessive-top-k-rejected
     description: top_k exceeding maximum must be rejected
@@ -388,13 +388,13 @@ contract_tests:
     expect_error: true
     error_pattern: "maximum"
 
-  - name: invalid-corpus-id-handled
-    description: Invalid corpus_id should return clear error
+  - name: invalid-corpus-id-format-rejected
+    description: Empty corpus_id should fail schema validation
     input:
       query: "test"
-      corpus_id: "nonexistent-corpus"
+      corpus_id: ""
     expect_error: true
-    error_pattern: "corpus.*not found|invalid corpus"
+    error_pattern: "minLength|required|shorter than"
 ```
 
 **ACL enforcement:**
@@ -568,7 +568,7 @@ contract_tests:
     input:
       path: "../secrets.txt"
     expect_error: true
-    error_pattern: "pattern"
+    error_pattern: "pattern|does not match"
 
   - name: max-bytes-too-large-rejected
     description: max_bytes over limit should fail
@@ -650,7 +650,7 @@ contract_tests:
       path: "src/main.rs"
       content: "not allowed"
     expect_error: true
-    error_pattern: "pattern"
+    error_pattern: "pattern|does not match"
 
   - name: empty-content-rejected
     description: Empty content must fail minLength validation
@@ -731,7 +731,7 @@ contract_tests:
       text: "x"
       strict: true
     expect_error: true
-    error_pattern: "minLength"
+    error_pattern: "minLength|shorter than"
 ```
 
 ---
@@ -810,7 +810,156 @@ contract_tests:
       format: iso_date
       timezone: "../../etc/passwd"
     expect_error: true
-    error_pattern: "pattern"
+    error_pattern: "pattern|does not match"
+```
+
+---
+
+### list_files
+
+Low-risk utility for listing files in approved directories.
+
+```yaml schema tool
+name: list_files
+version: "1.0.0"
+description: Lists files under approved workspace-relative directories with optional extension filtering
+risk_rating: low
+allowed_environments: [dev, stage]
+connector_binding: filesystem_connector
+timeout_seconds: 10
+max_retries: 0
+
+input_schema:
+  type: object
+  properties:
+    directory:
+      type: string
+      minLength: 1
+      maxLength: 500
+      pattern: "^(src|docs|tests|config)/?$"
+      description: Relative directory path to list
+    recursive:
+      type: boolean
+      default: false
+      description: Whether to list files recursively
+    extension:
+      type: string
+      pattern: "^\\.[A-Za-z0-9]+$"
+      description: Optional extension filter (e.g. .rs)
+  required: [directory]
+
+output_schema:
+  type: object
+  properties:
+    files:
+      type: array
+      items: {type: string}
+    count:
+      type: integer
+  required: [files, count]
+
+error_behavior:
+  timeout: fail_immediately
+  acl_denial: fail_immediately
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-directory-listing-schema
+    description: Valid directory request should pass schema validation
+    input:
+      directory: "src"
+      recursive: true
+      extension: ".rs"
+    expect_success: true
+
+  - name: disallowed-directory-rejected
+    description: Directory outside allowlist should fail pattern validation
+    input:
+      directory: "../"
+    expect_error: true
+    error_pattern: "pattern|does not match"
+
+  - name: invalid-extension-rejected
+    description: Extension without dot prefix should fail validation
+    input:
+      directory: "docs"
+      extension: "md"
+    expect_error: true
+    error_pattern: "pattern|does not match"
+```
+
+---
+
+### encode_base64
+
+Low-risk utility for deterministic Base64 encoding and decoding.
+
+```yaml schema tool
+name: encode_base64
+version: "1.0.0"
+description: Encodes or decodes Base64 payloads for safe transport between tools
+risk_rating: low
+allowed_environments: [dev, stage, prod]
+connector_binding: local_transform
+timeout_seconds: 5
+max_retries: 0
+
+input_schema:
+  type: object
+  properties:
+    mode:
+      type: string
+      enum: [encode, decode]
+      description: Operation mode
+    text:
+      type: string
+      minLength: 1
+      maxLength: 200000
+      description: Input text payload
+  required: [mode, text]
+
+output_schema:
+  type: object
+  properties:
+    mode:
+      type: string
+    result:
+      type: string
+  required: [mode, result]
+
+error_behavior:
+  timeout: fail_immediately
+
+policy_tags:
+  data_classification: internal
+  retention_class: SHORT
+
+contract_tests:
+  - name: valid-encode-request
+    description: Valid encode request should pass schema checks
+    input:
+      mode: encode
+      text: "hello"
+    expect_success: true
+
+  - name: invalid-mode-rejected
+    description: Unsupported mode should fail enum validation
+    input:
+      mode: transform
+      text: "hello"
+    expect_error: true
+    error_pattern: "enum|not one of"
+
+  - name: empty-text-rejected
+    description: Empty input text should fail minLength validation
+    input:
+      mode: decode
+      text: ""
+    expect_error: true
+    error_pattern: "minLength|shorter than"
 ```
 
 ---

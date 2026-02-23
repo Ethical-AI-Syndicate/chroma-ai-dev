@@ -16,5 +16,14 @@ pub fn validate_all_schemas() -> anyhow::Result<()> {
     if evals::all().is_empty() {
         return Err(anyhow::anyhow!("no eval schemas loaded"));
     }
+    if agents::all().is_empty() {
+        return Err(anyhow::anyhow!("no agent schemas loaded"));
+    }
+    if mcp_servers::all().is_empty() {
+        return Err(anyhow::anyhow!("no mcp server schemas loaded"));
+    }
+    if claude::all().is_empty() {
+        return Err(anyhow::anyhow!("no claude config schemas loaded"));
+    }
     Ok(())
 }

@@ -1,3 +1,4 @@
+use chroma_ai_dev::generated;
 use chroma_ai_dev::tools::{run_contract_tests, validate_tool_input, ToolValidationError};
 use serde_json::json;
 
@@ -9,6 +10,25 @@ fn tool_web_search_contract() {
 #[test]
 fn tool_execute_sql_query_contract() {
     run_tool_contracts("execute_sql_query", "1.0.0");
+}
+
+#[test]
+fn all_defined_tools_contracts_pass() {
+    let tools = generated::tools::all();
+    assert!(!tools.is_empty(), "tool registry should not be empty");
+
+    for schema in tools {
+        let tool_name = schema
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+            .expect("tool schema should contain name");
+        let version = schema
+            .get("version")
+            .and_then(serde_json::Value::as_str)
+            .expect("tool schema should contain version");
+
+        run_tool_contracts(tool_name, version);
+    }
 }
 
 #[test]

@@ -98,6 +98,15 @@ fn policy_tags_valid() {
     }
 }
 
+#[test]
+fn tool_schema_count_meets_phase1_target() {
+    assert!(
+        generated::tools::all().len() >= 10,
+        "phase 1 target requires at least 10 tool schemas; found {}",
+        generated::tools::all().len()
+    );
+}
+
 fn assert_unique(schemas: &[Value], id_field: &str) {
     let mut ids = HashSet::new();
     for schema in schemas {
