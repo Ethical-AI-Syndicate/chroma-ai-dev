@@ -24,7 +24,11 @@
 //!
 //! Generation happens at build time via `build.rs`.
 
+<<<<<<< HEAD
 pub mod config;
+=======
+pub mod agent_mail;
+>>>>>>> d2125b5 (feat(agent-mail): add mailbox threads and file lease coordination)
 pub mod docs_generation;
 pub mod evals;
 pub mod generated;
