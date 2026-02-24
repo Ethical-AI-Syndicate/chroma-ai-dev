@@ -24,6 +24,7 @@
 //!
 //! Generation happens at build time via `build.rs`.
 
+pub mod config;
 pub mod docs_generation;
 pub mod evals;
 pub mod generated;

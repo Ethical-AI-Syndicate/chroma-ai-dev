@@ -35,6 +35,9 @@ once_cell = "1.19"
 # URL encoding
 urlencoding = "2.1"
 
+# Database
+rusqlite = { version = "0.31", features = ["bundled"] }
+
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }

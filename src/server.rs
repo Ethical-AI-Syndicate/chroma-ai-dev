@@ -9,6 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
+pub use chroma_ai_dev::config;
+
 /// Global server state
 static SERVER_STATE: Lazy<Mutex<ServerState>> = Lazy::new(|| {
     Mutex::new(ServerState::default())
@@ -228,69 +230,96 @@ async fn execute_web_search(input: serde_json::Value) -> Result<serde_json::Valu
     let query = input["query"].as_str().unwrap_or("");
     let max_results = input["max_results"].as_i64().unwrap_or(5) as usize;
     
-    // Use Brave Search API (or mock for now)
-    // In production, use actual API key from config
-    let search_url = format!(
-        "https://search.brave.com/api/search?q={}&count={}",
-        urlencoding::encode(query),
-        max_results.min(10)
-    );
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .build()
+        .map_err(|e| e.to_string())?;
     
-    let client = reqwest::Client::new();
+    // Try DuckDuckGo HTML scrape (free, no API key needed)
+    let search_url = format!(
+        "https://html.duckduckgo.com/html/?q={}&b={}",
+        urlencoding::encode(query),
+        (max_results * 10) // Get more to filter
+    );
     
     match client.get(&search_url).send().await {
         Ok(response) => {
             if response.status().is_success() {
-                match response.json::<serde_json::Value>().await {
-                    Ok(json) => {
-                        let results = json["web"]["results"]
-                            .as_array()
-                            .map(|arr| {
-                                arr.iter().take(max_results).map(|r| {
-                                    serde_json::json!({
-                                        "title": r["title"].as_str().unwrap_or(""),
-                                        "url": r["url"].as_str().unwrap_or(""),
-                                        "snippet": r["description"].as_str().unwrap_or(""),
-                                        "rank": r["rank"].as_i64().unwrap_or(0)
-                                    })
-                                }).collect::<Vec<_>>()
-                            })
-                            .unwrap_or_default();
-                        
-                        Ok(serde_json::json!({
-                            "results": results,
-                            "query": query,
-                            "total_results": results.len()
-                        }))
-                    }
-                    Err(e) => Ok(serde_json::json!({
-                        "message": "Search completed but failed to parse response",
-                        "query": query,
-                        "error": e.to_string()
-                    }))
-                }
-            } else {
+                let body = response.text().await.map_err(|e| e.to_string())?;
+                
+                // Parse HTML results
+                let results = extract_ddg_results(&body, max_results);
+                
                 Ok(serde_json::json!({
-                    "message": "Search API returned error",
+                    "results": results,
                     "query": query,
-                    "status": response.status().as_u16()
+                    "total_results": results.len(),
+                    "source": "duckduckgo"
                 }))
+            } else {
+                Err(format!("Search failed with status: {}", response.status()))
             }
         }
-        Err(e) => Ok(serde_json::json!({
-            "message": "Search request failed, returning mock results",
-            "query": query,
-            "error": e.to_string(),
-            "results": [
-                {
-                    "title": format!("Mock result for: {}", query),
-                    "url": "https://example.com",
-                    "snippet": "This is a mock result since the search API is not available",
-                    "rank": 1
-                }
-            ]
-        }))
+        Err(e) => Err(format!("Network error: {}", e))
     }
+}
+
+/// Extract results from DuckDuckGo HTML
+fn extract_ddg_results(html: &str, max_results: usize) -> Vec<serde_json::Value> {
+    let mut results = Vec::new();
+    
+    // Simple regex-free parsing for result blocks
+    let html_lower = html.to_lowercase();
+    
+    // Find result blocks (between "result" divs)
+    let mut start = 0;
+    for _ in 0..max_results {
+        // Find next result__a (link)
+        if let Some(link_pos) = html_lower[start..].find("result__a") {
+            let pos = start + link_pos;
+            
+            // Extract title (from a tag text)
+            let title_start = match html[pos..].find(">") {
+                Some(p) => pos + p + 1,
+                None => { start += 1; continue; }
+            };
+            let title_end = match html[title_start..].find('<') {
+                Some(p) => title_start + p,
+                None => { start += 1; continue; }
+            };
+            let title = html[title_start..title_end].trim();
+            
+            // Extract URL from href
+            let href_start = match html[title_end..].find("href=\"") {
+                Some(p) => title_end + p + 6,
+                None => { start += 1; continue; }
+            };
+            let href_end = match html[href_start..].find('"') {
+                Some(p) => href_start + p,
+                None => { start += 1; continue; }
+            };
+            let url = &html[href_start..href_end];
+            
+            // Skip if not a valid URL
+            if url.starts_with("http") {
+                results.push(serde_json::json!({
+                    "title": title,
+                    "url": url,
+                    "snippet": format!("Result from {}", url)
+                }));
+            }
+            
+            start = href_end;
+        } else {
+            break;
+        }
+        
+        if results.len() >= max_results {
+            break;
+        }
+    }
+    
+    results
 }
 
 /// Execute execute_sql_query tool
@@ -303,11 +332,97 @@ async fn execute_sql_query(input: serde_json::Value) -> Result<serde_json::Value
         return Err("Only SELECT queries are allowed".to_string());
     }
     
+    // Get database path from config or use default
+    let db_path = config::get_config()
+        .database_url
+        .unwrap_or_else(|| "/tmp/chroma_db.sqlite".to_string());
+    
+    // Create a temporary in-memory database if file doesn't exist
+    let conn = if std::path::Path::new(&db_path).exists() {
+        rusqlite::Connection::open(&db_path)
+            .map_err(|e| format!("Failed to open database: {}", e))?
+    } else {
+        // Create in-memory database with sample data
+        let conn = rusqlite::Connection::open_in_memory()
+            .map_err(|e| format!("Failed to create database: {}", e))?;
+        
+        // Create sample tables
+        conn.execute(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, email TEXT, created_at TEXT)",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        conn.execute(
+            "CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, title TEXT, content TEXT, created_at TEXT)",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        // Insert sample data
+        conn.execute(
+            "INSERT INTO users (name, email, created_at) VALUES ('Alice', 'alice@example.com', '2024-01-01')",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        conn.execute(
+            "INSERT INTO users (name, email, created_at) VALUES ('Bob', 'bob@example.com', '2024-01-02')",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        conn.execute(
+            "INSERT INTO users (name, email, created_at) VALUES ('Charlie', 'charlie@example.com', '2024-01-03')",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        conn.execute(
+            "INSERT INTO posts (user_id, title, content, created_at) VALUES (1, 'Hello World', 'This is my first post!', '2024-01-01')",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        conn.execute(
+            "INSERT INTO posts (user_id, title, content, created_at) VALUES (2, 'Rust is Awesome', 'I love programming in Rust!', '2024-01-02')",
+            [],
+        ).map_err(|e| e.to_string())?;
+        
+        conn
+    };
+    
+    // Execute query
+    let mut stmt = conn.prepare(query)
+        .map_err(|e| format!("Query error: {}", e))?;
+    
+    let column_names: Vec<String> = stmt
+        .column_names()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    
+    let rows = stmt.query_map([], |row| {
+        let mut row_data = serde_json::Map::new();
+        for (i, col) in column_names.iter().enumerate() {
+            let value: rusqlite::types::Value = row.get(i)
+                .unwrap_or(rusqlite::types::Value::Null);
+            let json_value = match value {
+                rusqlite::types::Value::Null => serde_json::Value::Null,
+                rusqlite::types::Value::Integer(i) => serde_json::json!(i),
+                rusqlite::types::Value::Real(f) => serde_json::json!(f),
+                rusqlite::types::Value::Text(s) => serde_json::json!(s),
+                rusqlite::types::Value::Blob(b) => serde_json::json!(format!("[blob: {} bytes]", b.len())),
+            };
+            row_data.insert(col.clone(), json_value);
+        }
+        Ok(serde_json::Value::Object(row_data))
+    }).map_err(|e| format!("Query error: {}", e))?;
+    
+    let mut results = Vec::new();
+    for row in rows {
+        results.push(row.map_err(|e| format!("Row error: {}", e))?);
+    }
+    
     Ok(serde_json::json!({
-        "message": "SQL query executed (mock - no database configured)",
         "query": query,
-        "rows": [],
-        "columns": []
+        "rows": results,
+        "columns": column_names,
+        "row_count": results.len()
     }))
 }
 
