@@ -1,19 +1,15 @@
 // ChromaAI Dev - Terminal-first AI development, evaluation, and release tool
 // Copyright (c) 2026 ChromaAI Dev Team
 
-<<<<<<< HEAD
-use anyhow::Result;
-use chroma_ai_dev::generated;
-use clap::{Parser, Subcommand};
-mod server;
-=======
 #![allow(clippy::large_enum_variant)]
->>>>>>> 97c1928 (feat(control-plane): enforce policy budget and audit across advanced runtime)
 
 use anyhow::Result;
+use chroma_ai_dev::generated;
 use chroma_ai_dev::tickets::{TicketPriority, TicketStatus, TicketStore, TicketType};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+
+mod server;
 
 /// ChromaAI Dev: ChromaTUI-based AI development and evaluation tool. Without ChromaTUI there is no application.
 #[derive(Parser)]
@@ -293,22 +289,24 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Init { name }) => {
             println!("🚀 Initializing workspace: {}", name);
-<<<<<<< HEAD
-            
-            // Create workspace directory
-            let workspace_path = std::path::Path::new(&name);
-            if workspace_path.exists() {
-                println!("\n❌ Workspace '{}' already exists!", name);
-                std::process::exit(1);
+            let cwd = std::env::current_dir()?;
+            let root = cwd.join(&name);
+            if let Err(e) = std::fs::create_dir_all(&root) {
+                eprintln!("Could not create directory {}: {}", root.display(), e);
+                return Err(e.into());
             }
-            
-            // Create directory structure
-            std::fs::create_dir_all(workspace_path)?;
-            std::fs::create_dir_all(workspace_path.join(".chroma"))?;
-            std::fs::create_dir_all(workspace_path.join("prompts"))?;
-            std::fs::create_dir_all(workspace_path.join("tools"))?;
-            std::fs::create_dir_all(workspace_path.join("evals"))?;
-            
+
+            // Initialize ticket store
+            if let Ok(store) = TicketStore::init(&root) {
+                println!("   Issue tracking: {}", store.issues_dir().display());
+            }
+
+            // Create workspace structure
+            std::fs::create_dir_all(root.join(".chroma"))?;
+            std::fs::create_dir_all(root.join("prompts"))?;
+            std::fs::create_dir_all(root.join("tools"))?;
+            std::fs::create_dir_all(root.join("evals"))?;
+
             // Create config file
             let config = r#"# ChromaAI Workspace Configuration
 version: "1.0"
@@ -317,18 +315,18 @@ server:
   url: "http://localhost:8080"
   auth:
     type: "device"
-    
+
 # Local overrides
 local:
   prompts_dir: "./prompts"
   tools_dir: "./tools"
   evals_dir: "./evals"
 "#;
-            std::fs::write(workspace_path.join(".chroma/config.yaml"), config)?;
-            
+            std::fs::write(root.join(".chroma/config.yaml"), config)?;
+
             // Create .gitignore
-            std::fs::write(workspace_path.join(".gitignore"), ".chroma/\n*.log\n")?;
-            
+            std::fs::write(root.join(".gitignore"), ".chroma/\n*.log\n")?;
+
             println!("\n✅ Workspace '{}' created!", name);
             println!("\n📁 Structure:");
             println!("  {}/", name);
@@ -338,20 +336,6 @@ local:
             println!("  ├── evals/");
             println!("  └── .gitignore");
             println!("\n➡️  cd {} && chroma login", name);
-=======
-            let cwd = std::env::current_dir()?;
-            let root = cwd.join(&name);
-            if let Err(e) = std::fs::create_dir_all(&root) {
-                eprintln!("Could not create directory {}: {}", root.display(), e);
-                return Err(e.into());
-            }
-            if let Ok(store) = TicketStore::init(&root) {
-                println!("   Issue tracking: {}", store.issues_dir().display());
-            }
-            println!(
-                "\n❌ Full workspace init not implemented yet - see implementation plan Phase 0"
-            );
->>>>>>> 97c1928 (feat(control-plane): enforce policy budget and audit across advanced runtime)
             Ok(())
         }
         Some(Commands::Validate { file }) => {
@@ -396,21 +380,14 @@ local:
                 }
             }
             println!("📚 Quick start:");
-<<<<<<< HEAD
-            println!("  chroma serve        - Start HTTP server");
-            println!("  chroma validate    - Validate schema files");
-            println!("  chroma login       - Authenticate with SSO");
-            println!("  chroma init <name> - Initialize workspace\n");
-            println!("📖 For more commands, run: chroma --help");
-            println!("\n🚀 Status: Active - use 'chroma validate' to verify schemas");
-=======
             println!("  chroma tickets ready - List ready-to-work tickets (auto-setup if needed)");
             println!("  chroma tickets create \"Title\" -p 1 - Create a ticket");
+            println!("  chroma serve         - Start HTTP server");
             println!("  chroma validate      - Validate schema files");
             println!("  chroma login         - Authenticate with SSO");
             println!("  chroma init <name>   - Initialize workspace\n");
             println!("📖 For more commands, run: chroma --help");
->>>>>>> 97c1928 (feat(control-plane): enforce policy budget and audit across advanced runtime)
+            println!("\n🚀 Status: Active - use 'chroma validate' to verify schemas");
             Ok(())
         }
     }
