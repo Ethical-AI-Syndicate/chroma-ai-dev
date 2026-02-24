@@ -594,6 +594,175 @@ policy_tags:
 
 ---
 
+### mode-policy-suite
+
+Deterministic suite validating mode transition policies.
+
+```yaml schema eval
+suite_id: mode-policy-suite
+version: "1.0.0"
+description: Validates mode transition rules and central policy enforcement
+severity: critical
+
+cases:
+  - case_id: plan-to-build-allowed
+    description: Plan to Build transition should be allowed by default policy
+    input:
+      from: plan
+      to: build
+    expected_outcome:
+      type: success
+      allowed: true
+    grading_method: deterministic
+
+  - case_id: plan-to-review-denied
+    description: Plan to Review transition should be denied (must go through build)
+    input:
+      from: plan
+      to: review
+    expected_outcome:
+      type: success
+      allowed: false
+      error_type: invalid_transition
+    grading_method: deterministic
+
+  - case_id: incident-mode-requires-auth
+    description: Transition to incident mode requires elevated_by and reason
+    input:
+      to: incident
+      missing_fields: [reason, elevated_by]
+    expected_outcome:
+      type: success
+      allowed: false
+      error_type: missing_required_field
+    grading_method: deterministic
+
+thresholds:
+  pass_rate: 1.0
+  max_failures: 0
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: restricted
+  retention_class: STANDARD
+```
+
+---
+
+### lease-conflict-suite
+
+Deterministic suite validating inter-agent file lease coordination.
+
+```yaml schema eval
+suite_id: lease-conflict-suite
+version: "1.0.0"
+description: Validates file lease conflict detection and exclusive access invariants
+severity: high
+
+cases:
+  - case_id: exclusive-lease-blocks-read
+    description: Exclusive lease held by Agent A should block read lease for Agent B
+    input:
+      existing_lease: { agent_id: agent_a, path: "src/lib.rs", mode: exclusive }
+      requested_lease: { agent_id: agent_b, path: "src/lib.rs", mode: read }
+    expected_outcome:
+      type: success
+      allowed: false
+      error_type: lease_conflict
+    grading_method: deterministic
+
+  - case_id: write-lease-blocks-exclusive
+    description: Write lease held by Agent A should block exclusive lease for Agent B
+    input:
+      existing_lease: { agent_id: agent_a, path: "src/lib.rs", mode: write }
+      requested_lease: { agent_id: agent_b, path: "src/lib.rs", mode: exclusive }
+    expected_outcome:
+      type: success
+      allowed: false
+      error_type: lease_conflict
+    grading_method: deterministic
+
+  - case_id: concurrent-read-allowed
+    description: Multiple agents should be able to hold read leases on the same path
+    input:
+      existing_lease: { agent_id: agent_a, path: "src/lib.rs", mode: read }
+      requested_lease: { agent_id: agent_b, path: "src/lib.rs", mode: read }
+    expected_outcome:
+      type: success
+      allowed: true
+    grading_method: deterministic
+
+thresholds:
+  pass_rate: 1.0
+  max_failures: 0
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
+---
+
+### orchestrator-join-suite
+
+Deterministic suite validating DAG join behavior and parallel execution.
+
+```yaml schema eval
+suite_id: orchestrator-join-suite
+version: "1.0.0"
+description: Validates DAG scheduling, parallel readiness, and deterministic join reduction
+severity: high
+
+cases:
+  - case_id: independent-nodes-ready-concurrently
+    description: Multiple nodes with no dependencies should all be ready at once
+    input:
+      nodes: [a, b, c]
+      dependencies: {}
+    expected_outcome:
+      type: success
+      ready_count: 3
+    grading_method: deterministic
+
+  - case_id: join-blocks-until-all-parents-done
+    description: A join node should stay blocked until ALL parent dependencies complete
+    input:
+      nodes: [a, b, join]
+      dependencies: { join: [a, b] }
+      completed: [a]
+    expected_outcome:
+      type: success
+      ready_nodes: [b]
+      blocked_nodes: [join]
+    grading_method: deterministic
+
+  - case_id: failure-aborts-downstream
+    description: Failure in a parent node should mark downstream nodes as blocked in fail-fast mode
+    input:
+      nodes: [a, b]
+      dependencies: { b: [a] }
+      failed: [a]
+    expected_outcome:
+      type: success
+      node_statuses: { b: blocked }
+    grading_method: deterministic
+
+thresholds:
+  pass_rate: 1.0
+  max_failures: 0
+
+regression_blocking: true
+
+policy_tags:
+  data_classification: internal
+  retention_class: STANDARD
+```
+
+---
+
 ## Evaluation Execution
 
 **Running eval suites:**

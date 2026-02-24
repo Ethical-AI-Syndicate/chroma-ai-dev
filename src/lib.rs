@@ -40,6 +40,7 @@ pub mod prompts;
 pub mod schema_lint;
 pub mod terminal_safety;
 pub mod tickets;
+pub mod tui;
 pub mod tools;
 pub mod versioning;
 

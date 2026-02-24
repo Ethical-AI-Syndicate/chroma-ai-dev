@@ -129,3 +129,20 @@ fn regression_blocking_reported_when_threshold_not_met() {
     assert!(report.regression_blocking);
     assert!(!report.passed);
 }
+
+#[test]
+fn test_new_advanced_suites_are_routable() {
+    let empty_results = HashMap::new();
+
+    // Check mode-policy-suite
+    let report = run_deterministic_suite("mode-policy-suite", "1.0.0", &empty_results);
+    assert!(report.is_ok());
+
+    // Check lease-conflict-suite
+    let report = run_deterministic_suite("lease-conflict-suite", "1.0.0", &empty_results);
+    assert!(report.is_ok());
+
+    // Check orchestrator-join-suite
+    let report = run_deterministic_suite("orchestrator-join-suite", "1.0.0", &empty_results);
+    assert!(report.is_ok());
+}

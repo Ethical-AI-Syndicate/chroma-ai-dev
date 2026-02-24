@@ -3,7 +3,7 @@ name = "chroma-ai-dev"
 version = "0.1.0"
 edition = "2021"
 authors = ["ChromaAI Dev Team"]
-description = "Terminal-first AI development, evaluation, and release tool"
+description = "ChromaTUI-based AI development, evaluation, and release tool. Without ChromaTUI there is no application."
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/Ethical-AI-Syndicate/chroma-ai-dev"
 keywords = ["ai", "llm", "evaluation", "terminal", "tui"]
@@ -66,8 +66,9 @@ chrono = { version = "0.4", features = ["serde"] }
 # Regex
 regex = "1.10"
 
-# Terminal UI foundation (pinned to upstream tip)
-chromatui = { git = "https://github.com/Ethical-AI-Syndicate/chromatui", rev = "db3bde36e3b32a5b81fb565473687e9323d79e32", optional = true }
+# ChromaTUI: the application. Without it there is no application.
+chromatui = { git = "https://github.com/Ethical-AI-Syndicate/chromatui", rev = "db3bde36e3b32a5b81fb565473687e9323d79e32" }
+chromatui-core = { git = "https://github.com/Ethical-AI-Syndicate/chromatui", rev = "db3bde36e3b32a5b81fb565473687e9323d79e32", package = "chromatui-core" }
 
 [build-dependencies]
 # Markdown parsing
@@ -99,10 +100,6 @@ tempfile = "3.13"
 
 # Property-based testing
 proptest = "1.5"
-
-[features]
-default = ["tui"]
-tui = ["dep:chromatui"]
 
 [[bin]]
 name = "chroma"

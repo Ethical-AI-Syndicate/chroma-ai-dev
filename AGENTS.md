@@ -17,7 +17,7 @@ This file serves dual purposes:
 
 ### Project Context
 
-ChromaAI Dev is an **enterprise-grade terminal-first AI development, evaluation, and release tool** built with Rust + chromatui. This is not a toy project or prototype - it must meet strict enterprise requirements for:
+ChromaAI Dev is an **enterprise-grade terminal-first AI development, evaluation, and release tool** built with Rust + ChromaTUI. **Without ChromaTUI there is no application**—the TUI is the foundation everything is built on. This is not a toy project or prototype - it must meet strict enterprise requirements for:
 
 - Security (SSO/RBAC, audit trails, no secrets on disk)
 - Reliability (thin-client architecture, server-authoritative policy)
@@ -210,6 +210,52 @@ These requirements align with the global CLAUDE.md instructions and are NON-NEGO
 5. Manual testing with production-like config
 6. Visual validation for TUI changes
 7. Update schemas in markdown files if needed
+
+### Issue Tracking (Tickets)
+
+Work is tracked in a **file-based ticket system** under `.chroma/issues/`. The application **automatically uses** it: running `chroma` (no args) shows ready/in-progress/open counts and suggests next work; any ticket command (e.g. `chroma tickets ready`) **auto-initializes** `.chroma/issues` at the git root if missing. No interactive editor—all updates via flags for agent use.
+
+**Setup:** Optional. Run `chroma tickets init` explicitly, or run any ticket command from inside a git repo to auto-setup at repo root.
+
+**Essential commands:**
+| Command | Action |
+|--------|--------|
+| `chroma status` | Show issue summary: ready / in-progress / open counts and next ticket (use `--json` for agents) |
+| `chroma tickets ready` | List tickets with no open blockers (pick next work) |
+| `chroma tickets create "Title" -p 1` | Create a P1 ticket |
+| `chroma tickets claim <id>` | Set ticket in_progress (optionally `--assignee`) |
+| `chroma tickets update <id> --status in_progress` | Same as claim (for scripts) |
+| `chroma tickets close <id> --status done` | Close a ticket |
+| `chroma tickets list` | List tickets (optional filters: `--status`, `--priority`, `--assignee`) |
+| `chroma tickets show <id>` | View full ticket (includes blocked_by, dependencies) |
+
+**Agent use:** Add `--json` to any command for JSON output (e.g. `chroma tickets ready --json`).
+
+**Commit message convention:** When a commit completes work for a ticket, append the ID in parentheses:
+```text
+Fix auth validation bug (chr-a1b2c3d4)
+```
+This enables `chroma tickets doctor --orphans` to detect commits that reference a ticket but the ticket was not closed.
+
+**Design:** [docs/plans/2026-02-24-issue-tracking-ticket-system-design.md](docs/plans/2026-02-24-issue-tracking-ticket-system-design.md)
+
+### Land the Plane
+
+When the user says **"land the plane"** (or equivalent), complete ALL steps below. The plane is NOT landed until `git push` succeeds.
+
+1. **File tickets for remaining work** — Create tickets for any follow-up (e.g. `chroma tickets create "Add integration tests for X" -p 2`).
+2. **Run quality gates** (if code changed): `cargo build`, `cargo test --lib`, `cargo clippy`, `cargo fmt`. File a ticket if something is broken.
+3. **Update tickets** — Close finished work: `chroma tickets close <id> --status done`.
+4. **Push to remote (mandatory):**
+   ```bash
+   git pull --rebase
+   git push
+   git status   # Must show "up to date with origin/..."
+   ```
+5. **Optional:** `chroma tickets doctor --orphans` to list open tickets mentioned in recent commits.
+6. **Suggest next work** — e.g. run `chroma tickets ready --json` and suggest a prompt for the next session.
+
+Do not stop with "ready to push when you are"—actually push.
 
 ### Common Pitfalls to Avoid
 

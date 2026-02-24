@@ -1,6 +1,6 @@
 # ChromaAI Dev
 
-**Terminal-first AI development, evaluation, and release tool**
+**ChromaTUI-based AI development, evaluation, and release tool.** Without ChromaTUI there is no application—the TUI is the foundation everything is built on.
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE)
 [![Status: Phase 0 (Bootstrap)](https://img.shields.io/badge/status-Phase%200%20(Bootstrap)-yellow.svg)](docs/plans/2026-02-23-implementation-plan.md)
@@ -20,9 +20,11 @@ ChromaAI Dev is an enterprise-grade terminal-first tool for AI development, eval
 
 ## Architecture
 
+The application **is** ChromaTUI. Without ChromaTUI there is no application. All features are delivered through the TUI.
+
 ChromaAI Dev follows a **thin-client** architecture:
 
-- **Client (Rust TUI/CLI)**: User interaction, validates for UX
+- **Client (ChromaTUI)**: The application; user interaction, validates for UX
 - **Control Plane**: Server-side policy enforcement, artifact storage, audit logging
 - **Execution Plane**: Provider gateways, tool execution, retrieval services
 

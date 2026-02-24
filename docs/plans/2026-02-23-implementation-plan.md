@@ -383,6 +383,7 @@ semver = "1.0"
 - [ ] All meta-schemas created in `docs/schemas/`
 - [ ] `build.rs` extracts and validates schemas successfully
 - [ ] `build.rs` generates Rust code in `src/generated/`
+- [x] `chroma validate` (no args) runs full validation via `cargo build`; `chroma validate <file>` runs `schema_lint` on that file
 - [ ] `cargo build` completes without errors
 - [ ] All tests pass: `cargo test`
 - [ ] CI pipeline runs successfully
@@ -804,6 +805,7 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 - [x] Design document
 - [x] Implementation plan
 - [x] Phase 0: Bootstrap and validation/codegen foundation
+- [x] `chroma validate` CLI: full validation via `cargo build`; single-file validation via `schema_lint` (TOOLS.md, PROMPTS.md, etc.)
 - [x] Phase 1: Tool validation runtime + contract runner + expanded tool catalog
 - [x] Phase 2: Prompt rendering + variable validation + expanded prompt catalog
 - [x] Phase 3: Deterministic and LLM-judge eval runners + regression gating
@@ -819,20 +821,5 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 
 ---
 
-## Phase 0 Acceptance Criteria
-
-- [x] All 6 markdown files created with complete Part A + Part B examples
-- [x] All meta-schemas created in `docs/schemas/`
-- [x] `build.rs` extracts and validates schemas successfully
-- [x] `build.rs` generates Rust code in `src/generated/`
-- [x] `cargo build` completes without errors
-- [x] All tests pass: `cargo test`
-- [x] CI pipeline runs successfully (GitHub Actions added 2026-02-23)
-- [x] Git hooks prevent invalid commits
-- [x] No schema validation errors
-- [x] Generated code is deterministic (rebuild produces same output)
-
----
-
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-02-24
 **Next Review:** After CI confirmation and migration-guide rollout policy is finalized
