@@ -83,7 +83,9 @@ struct AuthResponse {
 /// Login request
 #[derive(Deserialize)]
 struct LoginRequest {
+    #[allow(dead_code)]
     username: Option<String>,
+    #[allow(dead_code)]
     token: Option<String>,
 }
 
@@ -126,7 +128,7 @@ async fn auth_status() -> Json<AuthResponse> {
 }
 
 /// Login - set authenticated state
-async fn login(Json(payload): Json<LoginRequest>) -> Json<LoginResponse> {
+async fn login(Json(_payload): Json<LoginRequest>) -> Json<LoginResponse> {
     // In production, validate credentials against OIDC provider
     // For dev mode, accept any login
     let mut state = SERVER_STATE.lock().unwrap();
@@ -593,7 +595,6 @@ fn simple_eval(expr: &str) -> Result<f64, String> {
                 if !current_num.is_empty() {
                     let num: f64 = current_num.parse().map_err(|_| "Invalid number")?;
                     let mut next_num = String::new();
-                    let mut i = 0;
                     let chars: Vec<char> = expr.chars().collect();
                     
                     // Find next number
@@ -896,21 +897,11 @@ struct RunEvalRequest {
     test_cases: Option<Vec<serde_json::Value>>,
 }
 
-#[derive(Serialize)]
-struct EvalResult {
-    eval_name: String,
-    passed: bool,
-    total_tests: usize,
-    passed_tests: usize,
-    failed_tests: usize,
-    results: Vec<serde_json::Value>,
-}
-
 /// Run an eval suite
 async fn run_eval(Json(payload): Json<RunEvalRequest>) -> Json<serde_json::Value> {
     // Find the eval
     let version = payload.version.as_deref().unwrap_or("1.0.0");
-    let eval = match chroma_ai_dev::generated::evals::find_by_name_and_version(&payload.eval_name, version) {
+    let _eval = match chroma_ai_dev::generated::evals::find_by_name_and_version(&payload.eval_name, version) {
         Some(e) => e,
         None => {
             return Json(serde_json::json!({
@@ -1010,7 +1001,7 @@ mod tests {
     
     #[test]
     fn server_has_routes() {
-        let routes = router();
+        let _routes = router();
         assert!(true);
     }
 }
