@@ -218,6 +218,10 @@ async fn execute_tool_by_name(
         "web_search" => execute_web_search(input).await,
         "execute_sql_query" => execute_sql_query(input).await,
         "retrieve_docs" => execute_retrieve_docs(input).await,
+        "weather" => execute_weather(input).await,
+        "calculator" => execute_calculator(input),
+        "dictionary" => execute_dictionary(input).await,
+        "unit_converter" => execute_unit_converter(input),
         _ => Ok(serde_json::json!({
             "message": format!("Tool '{}' validated successfully", tool_name),
             "input": input
@@ -468,6 +472,298 @@ async fn execute_retrieve_docs(input: serde_json::Value) -> Result<serde_json::V
         "documents": results,
         "total": results.len()
     }))
+}
+
+/// Execute weather tool
+async fn execute_weather(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let location = input["location"].as_str().unwrap_or("Toronto");
+    
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+    
+    let url = format!("https://wttr.in/{}?format=j1", urlencoding::encode(location));
+    
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                let data: serde_json::Value = response.json().await
+                    .map_err(|e| format!("Failed to parse response: {}", e))?;
+                
+                let current = &data["current_condition"][0];
+                
+                Ok(serde_json::json!({
+                    "location": location,
+                    "temperature_C": current["temp_C"],
+                    "temperature_F": current["temp_F"],
+                    "feels_like_C": current["FeelsLikeC"],
+                    "humidity": current["humidity"],
+                    "weather": current["weatherDesc"][0]["value"],
+                    "wind": current["winddir16Point"],
+                    "pressure": current["pressure"],
+                    "visibility": current["visibility"],
+                    "uv_index": current["uvIndex"]
+                }))
+            } else {
+                Err(format!("Weather API returned: {}", response.status()))
+            }
+        }
+        Err(e) => Err(format!("Network error: {}", e))
+    }
+}
+
+/// Execute calculator tool
+fn execute_calculator(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let expression = input["expression"].as_str().unwrap_or("");
+    
+    // Simple calculator - supports +, -, *, /, ^, sqrt, sin, cos, tan, log, ln
+    let expr_lower = expression.to_lowercase();
+    
+    let result = if expr_lower.starts_with("sqrt(") {
+        let inner = &expression[5..expression.len()-1];
+        let num: f64 = inner.parse().map_err(|_| "Invalid number")?;
+        num.sqrt()
+    } else if expr_lower.starts_with("sin(") {
+        let inner = &expression[4..expression.len()-1];
+        let num: f64 = inner.parse().map_err(|_| "Invalid number")?;
+        num.to_radians().sin()
+    } else if expr_lower.starts_with("cos(") {
+        let inner = &expression[4..expression.len()-1];
+        let num: f64 = inner.parse().map_err(|_| "Invalid number")?;
+        num.to_radians().cos()
+    } else if expr_lower.starts_with("tan(") {
+        let inner = &expression[4..expression.len()-1];
+        let num: f64 = inner.parse().map_err(|_| "Invalid number")?;
+        num.to_radians().tan()
+    } else if expr_lower.starts_with("log(") {
+        let inner = &expression[4..expression.len()-1];
+        let num: f64 = inner.parse().map_err(|_| "Invalid number")?;
+        num.log10()
+    } else if expr_lower.starts_with("ln(") {
+        let inner = &expression[3..expression.len()-1];
+        let num: f64 = inner.parse().map_err(|_| "Invalid number")?;
+        num.ln()
+    } else {
+        // Basic arithmetic using meval crate simulation
+        // Replace ^ with ** for Rust
+        let expr_fixed = expression.replace('^', "**");
+        
+        // Simple eval (be careful with this!)
+        simple_eval(&expr_fixed)?
+    };
+    
+    Ok(serde_json::json!({
+        "expression": expression,
+        "result": result,
+        "formatted": format!("{}", result)
+    }))
+}
+
+/// Simple expression evaluator
+fn simple_eval(expr: &str) -> Result<f64, String> {
+    let expr = expr.replace(" ", "");
+    
+    // Handle parentheses first (simplified)
+    if expr.contains('(') {
+        return Err("Parentheses not supported in simple mode".to_string());
+    }
+    
+    // Split by + and - (lowest precedence)
+    let mut result = 0.0;
+    let mut current_op = '+';
+    let mut current_num = String::new();
+    
+    for ch in expr.chars() {
+        match ch {
+            '+' | '-' => {
+                if !current_num.is_empty() {
+                    let num: f64 = current_num.parse().map_err(|_| "Invalid number")?;
+                    match current_op {
+                        '+' => result += num,
+                        '-' => result -= num,
+                        _ => {}
+                    }
+                    current_num = String::new();
+                }
+                current_op = ch;
+            }
+            '*' | '/' => {
+                // Handle * and / with higher precedence
+                if !current_num.is_empty() {
+                    let num: f64 = current_num.parse().map_err(|_| "Invalid number")?;
+                    let mut next_num = String::new();
+                    let mut i = 0;
+                    let chars: Vec<char> = expr.chars().collect();
+                    
+                    // Find next number
+                    let mut j = expr.find(ch).unwrap_or(0) + 1;
+                    while j < chars.len() {
+                        match chars[j] {
+                            '0'..='9' | '.' => next_num.push(chars[j]),
+                            _ => break,
+                        }
+                        j += 1;
+                    }
+                    
+                    let next: f64 = next_num.parse().unwrap_or(1.0);
+                    let intermediate = match ch {
+                        '*' => num * next,
+                        '/' => num / next,
+                        _ => num,
+                    };
+                    
+                    match current_op {
+                        '+' => result += intermediate,
+                        '-' => result -= intermediate,
+                        _ => result = intermediate,
+                    }
+                    current_num = String::new();
+                    break;
+                }
+            }
+            _ => current_num.push(ch),
+        }
+    }
+    
+    // Handle last number
+    if !current_num.is_empty() {
+        let num: f64 = current_num.parse().map_err(|_| "Invalid number")?;
+        match current_op {
+            '+' => result += num,
+            '-' => result -= num,
+            _ => {}
+        }
+    }
+    
+    Ok(result)
+}
+
+/// Execute dictionary tool
+async fn execute_dictionary(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let word = input["word"].as_str().unwrap_or("");
+    
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| e.to_string())?;
+    
+    let url = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", urlencoding::encode(word));
+    
+    match client.get(&url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                let data: serde_json::Value = response.json().await
+                    .map_err(|e| format!("Failed to parse: {}", e))?;
+                
+                // Extract relevant info
+                let mut definitions = Vec::new();
+                if let Some(arr) = data.as_array() {
+                    for entry in arr {
+                        if let Some(meanings) = entry.get("meanings").and_then(|m| m.as_array()) {
+                            for meaning in meanings {
+                                let part_of_speech = meaning.get("partOfSpeech").and_then(|p| p.as_str()).unwrap_or("");
+                                if let Some(defs) = meaning.get("definitions").and_then(|d| d.as_array()) {
+                                    for def in defs.iter().take(3) {
+                                        definitions.push(serde_json::json!({
+                                            "part_of_speech": part_of_speech,
+                                            "definition": def.get("definition").and_then(|d| d.as_str()).unwrap_or(""),
+                                            "example": def.get("example").and_then(|e| e.as_str()).unwrap_or("")
+                                        }));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                Ok(serde_json::json!({
+                    "word": word,
+                    "definitions": definitions
+                }))
+            } else if response.status().as_u16() == 404 {
+                Err(format!("Word '{}' not found in dictionary", word))
+            } else {
+                Err(format!("Dictionary API error: {}", response.status()))
+            }
+        }
+        Err(e) => Err(format!("Network error: {}", e))
+    }
+}
+
+/// Execute unit converter tool
+fn execute_unit_converter(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let value: f64 = input["value"].as_f64().ok_or("Invalid number")?;
+    let from_unit = input["from"].as_str().ok_or("Missing unit")?;
+    let to_unit = input["to"].as_str().ok_or("Missing target unit")?;
+    
+    // Convert to base unit first, then to target
+    let in_base = convert_to_base(value, from_unit)?;
+    let result = convert_from_base(in_base, to_unit)?;
+    
+    Ok(serde_json::json!({
+        "value": value,
+        "from": from_unit,
+        "to": to_unit,
+        "result": result,
+        "formatted": format!("{} {} = {} {}", value, from_unit, result, to_unit)
+    }))
+}
+
+fn convert_to_base(value: f64, unit: &str) -> Result<f64, String> {
+    match unit.to_lowercase().as_str() {
+        // Length (base: meters)
+        "m" | "meter" | "meters" => Ok(value),
+        "km" | "kilometer" | "kilometers" => Ok(value * 1000.0),
+        "cm" | "centimeter" | "centimeters" => Ok(value / 100.0),
+        "mm" | "millimeter" | "millimeters" => Ok(value / 1000.0),
+        "mi" | "mile" | "miles" => Ok(value * 1609.344),
+        "yd" | "yard" | "yards" => Ok(value * 0.9144),
+        "ft" | "foot" | "feet" => Ok(value * 0.3048),
+        "in" | "inch" | "inches" => Ok(value * 0.0254),
+        
+        // Weight (base: grams)
+        "g" | "gram" | "grams" => Ok(value),
+        "kg" | "kilogram" | "kilograms" => Ok(value * 1000.0),
+        "mg" | "milligram" | "milligrams" => Ok(value / 1000.0),
+        "lb" | "lbs" | "pound" | "pounds" => Ok(value * 453.592),
+        "oz" | "ounce" | "ounces" => Ok(value * 28.3495),
+        
+        // Temperature (base: celsius)
+        "c" | "celsius" => Ok(value),
+        "f" | "fahrenheit" => Ok((value - 32.0) * 5.0 / 9.0),
+        "k" | "kelvin" => Ok(value - 273.15),
+        
+        _ => Err(format!("Unknown unit: {}", unit))
+    }
+}
+
+fn convert_from_base(value: f64, unit: &str) -> Result<f64, String> {
+    match unit.to_lowercase().as_str() {
+        // Length
+        "m" | "meter" | "meters" => Ok(value),
+        "km" | "kilometer" | "kilometers" => Ok(value / 1000.0),
+        "cm" | "centimeter" | "centimeters" => Ok(value * 100.0),
+        "mm" | "millimeter" | "millimeters" => Ok(value * 1000.0),
+        "mi" | "mile" | "miles" => Ok(value / 1609.344),
+        "yd" | "yard" | "yards" => Ok(value / 0.9144),
+        "ft" | "foot" | "feet" => Ok(value / 0.3048),
+        "in" | "inch" | "inches" => Ok(value / 0.0254),
+        
+        // Weight
+        "g" | "gram" | "grams" => Ok(value),
+        "kg" | "kilogram" | "kilograms" => Ok(value / 1000.0),
+        "mg" | "milligram" | "milligrams" => Ok(value * 1000.0),
+        "lb" | "lbs" | "pound" | "pounds" => Ok(value / 453.592),
+        "oz" | "ounce" | "ounces" => Ok(value / 28.3495),
+        
+        // Temperature
+        "c" | "celsius" => Ok(value),
+        "f" | "fahrenheit" => Ok(value * 9.0 / 5.0 + 32.0),
+        "k" | "kelvin" => Ok(value + 273.15),
+        
+        _ => Err(format!("Unknown unit: {}", unit))
+    }
 }
 
 /// Get available tools
