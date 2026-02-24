@@ -6,6 +6,7 @@ use axum::{
     response::Json,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
 
@@ -19,7 +20,7 @@ static SERVER_STATE: Lazy<Mutex<ServerState>> = Lazy::new(|| {
 /// In-memory RAG corpus
 static RAG_CORPUS: Lazy<Mutex<RagCorpus>> = Lazy::new(|| {
     Mutex::new(RagCorpus {
-        documents: vec![
+        documents: VecDeque::from([
             RagDocument {
                 id: "doc1".to_string(),
                 content: "Rust async programming uses futures, which are values that represent a computation that may not have completed yet. The async/await syntax makes working with futures more ergonomic.".to_string(),
@@ -45,7 +46,7 @@ static RAG_CORPUS: Lazy<Mutex<RagCorpus>> = Lazy::new(|| {
                 content: "OIDC (OpenID Connect) is an identity layer on top of OAuth 2.0. It provides authentication for modern applications.".to_string(),
                 metadata: serde_json::json!({"source": "oidc-spec", "topic": "auth"}),
             },
-        ],
+        ]),
     })
 });
 
@@ -56,9 +57,22 @@ struct ServerState {
     eval_runs: u64,
 }
 
+/// Maximum number of documents in RAG corpus to prevent unbounded memory growth
+const MAX_RAG_DOCUMENTS: usize = 10_000;
+
 #[derive(Default)]
 struct RagCorpus {
-    documents: Vec<RagDocument>,
+    documents: VecDeque<RagDocument>,
+}
+
+impl RagCorpus {
+    fn push(&mut self, doc: RagDocument) {
+        // Remove oldest if at capacity to prevent unbounded memory growth
+        if self.documents.len() >= MAX_RAG_DOCUMENTS {
+            self.documents.pop_front();
+        }
+        self.documents.push_back(doc);
+    }
 }
 
 struct RagDocument {
@@ -862,7 +876,7 @@ async fn rag_index(Json(payload): Json<RagIndexRequest>) -> Json<serde_json::Val
         metadata: payload.metadata.unwrap_or(serde_json::json!({})),
     };
     
-    RAG_CORPUS.lock().unwrap().documents.push(doc);
+    RAG_CORPUS.lock().unwrap().push(doc);
     
     Json(serde_json::json!({
         "success": true,

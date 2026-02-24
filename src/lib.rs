@@ -34,6 +34,7 @@ pub mod docs_generation;
 pub mod evals;
 pub mod generated;
 pub mod lsp_manager;
+pub mod memory_profiler;
 pub mod modes;
 pub mod orchestrator;
 pub mod prompts;

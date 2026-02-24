@@ -1,9 +1,15 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use uuid::Uuid;
 
 use crate::modes::AgentMode;
+
+/// Maximum audit events to retain in memory (prevents unbounded growth)
+const MAX_AUDIT_EVENTS: usize = 10_000;
+
+/// Maximum policy decisions to retain in memory (prevents unbounded growth)
+const MAX_POLICY_DECISIONS: usize = 10_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyDecision {
@@ -105,8 +111,8 @@ pub enum ControlPlaneError {
 pub struct ControlPlane {
     policy_mode: String,
     budget: BudgetState,
-    audit_events: Vec<AuditEvent>,
-    policy_decisions: Vec<PolicyDecision>,
+    audit_events: VecDeque<AuditEvent>,
+    policy_decisions: VecDeque<PolicyDecision>,
     tool_allowlist: HashMap<String, Vec<String>>,
 }
 
@@ -115,8 +121,8 @@ impl ControlPlane {
         Self {
             policy_mode: "standard".to_string(),
             budget: BudgetState::new(100.0),
-            audit_events: Vec::new(),
-            policy_decisions: Vec::new(),
+            audit_events: VecDeque::with_capacity(MAX_AUDIT_EVENTS),
+            policy_decisions: VecDeque::with_capacity(MAX_POLICY_DECISIONS),
             tool_allowlist: HashMap::new(),
         }
     }
@@ -163,15 +169,19 @@ impl ControlPlane {
             details,
             timestamp: Utc::now(),
         };
-        self.audit_events.push(event);
+        // Bounded push to prevent unbounded memory growth
+        if self.audit_events.len() >= MAX_AUDIT_EVENTS {
+            self.audit_events.pop_front();
+        }
+        self.audit_events.push_back(event);
     }
 
-    pub fn get_audit_events(&self) -> &[AuditEvent] {
-        &self.audit_events
+    pub fn get_audit_events(&self) -> Vec<AuditEvent> {
+        self.audit_events.iter().cloned().collect()
     }
 
-    pub fn get_policy_decisions(&self) -> &[PolicyDecision] {
-        &self.policy_decisions
+    pub fn get_policy_decisions(&self) -> Vec<PolicyDecision> {
+        self.policy_decisions.iter().cloned().collect()
     }
 
     pub fn add_tool_allowlist(&mut self, agent_id: &str, tools: Vec<String>) {
