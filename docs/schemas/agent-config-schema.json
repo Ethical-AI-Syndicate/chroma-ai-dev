@@ -134,6 +134,44 @@
           "enum": ["NONE", "SHORT", "STANDARD", "LEGAL_HOLD"]
         }
       }
+    },
+    "session_timeout_seconds": {
+      "type": "integer",
+      "description": "Maximum session duration for multi-turn mode in seconds",
+      "minimum": 60,
+      "maximum": 86400
+    },
+    "max_concurrent_agents": {
+      "type": "integer",
+      "description": "Maximum number of agents that can run in parallel for orchestration",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "dependency_strategy": {
+      "type": "string",
+      "description": "How to handle dependencies in DAG execution",
+      "enum": ["fail_fast", "wait_all", "optimistic"]
+    },
+    "failure_handling": {
+      "type": "string",
+      "description": "How to handle agent failures in orchestration",
+      "enum": ["abort_all", "continue_others", "retry_then_abort"]
+    },
+    "retry_policy": {
+      "type": "object",
+      "description": "Retry configuration for failed agent executions",
+      "properties": {
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "backoff_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60
+        }
+      }
     }
   },
   "additionalProperties": false,

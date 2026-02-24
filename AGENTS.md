@@ -383,6 +383,7 @@ max_steps: 12
 max_tool_calls: 24
 max_wall_time_seconds: 420
 max_cost_dollars: 1.50
+session_timeout_seconds: 1800
 require_confirmation_for_high_risk: true
 allowed_models:
   - claude-sonnet-4-5
@@ -406,6 +407,12 @@ max_steps: 30
 max_tool_calls: 80
 max_wall_time_seconds: 900
 max_cost_dollars: 3.00
+max_concurrent_agents: 4
+dependency_strategy: fail_fast
+failure_handling: abort_all
+retry_policy:
+  max_retries: 2
+  backoff_seconds: 5
 require_confirmation_for_high_risk: true
 allowed_models:
   - claude-sonnet-4-5

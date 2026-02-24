@@ -997,7 +997,7 @@ input_schema:
       items: {type: string}
       minItems: 1
       description: Capability tags for routing
-  required: [agent_id, display_name]
+  required: [agent_id, display_name, capabilities]
 
 output_schema:
   type: object
@@ -1273,19 +1273,24 @@ input_schema:
       minimum: 60
       maximum: 7200
       description: Reservation TTL in seconds
+    mode:
+      type: string
+      enum: [read, write, exclusive]
+      default: read
+      description: Lease mode - read allows others to read, write allows modification, exclusive blocks all access
   required: [agent_id, path, lease_seconds]
 
 output_schema:
   type: object
   properties:
-    reservation_id:
+    lease_id:
       type: string
     path:
       type: string
     expires_at:
       type: string
       format: date-time
-  required: [reservation_id, path, expires_at]
+  required: [lease_id, path, expires_at]
 
 error_behavior:
   acl_denial: fail_immediately
