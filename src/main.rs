@@ -4,6 +4,7 @@
 use anyhow::Result;
 use chroma_ai_dev::generated;
 use clap::{Parser, Subcommand};
+mod server;
 
 /// ChromaAI Dev - Terminal-first AI development and evaluation tool
 #[derive(Parser)]
@@ -24,6 +25,13 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Start the HTTP server
+    Serve {
+        /// Port to listen on
+        #[arg(short, long, default_value = "8080")]
+        port: u16,
+    },
+
     /// Authenticate with SSO (OIDC device flow)
     Login {
         /// OIDC provider URL
@@ -57,6 +65,11 @@ async fn main() -> Result<()> {
 
     // Execute command
     match cli.command {
+        Some(Commands::Serve { port }) => {
+            println!("🚀 Starting ChromaAI Dev server...");
+            server::run_server(port).await?;
+            Ok(())
+        }
         Some(Commands::Login { provider }) => {
             let provider_url = provider.unwrap_or_else(|| "https://auth.example.com".to_string());
             println!("🔐 Initiating OIDC device flow...");
@@ -203,6 +216,7 @@ local:
             println!("ChromaAI Dev v{}", env!("CARGO_PKG_VERSION"));
             println!("Terminal-first AI development, evaluation, and release tool\n");
             println!("📚 Quick start:");
+            println!("  chroma serve        - Start HTTP server");
             println!("  chroma validate    - Validate schema files");
             println!("  chroma login       - Authenticate with SSO");
             println!("  chroma init <name> - Initialize workspace\n");
