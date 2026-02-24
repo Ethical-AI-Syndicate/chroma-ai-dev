@@ -29,6 +29,7 @@ pub mod docs_generation;
 pub mod evals;
 pub mod generated;
 pub mod modes;
+pub mod orchestrator;
 pub mod prompts;
 pub mod schema_lint;
 pub mod terminal_safety;
