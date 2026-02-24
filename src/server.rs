@@ -34,6 +34,20 @@ struct AuthResponse {
     authenticated: bool,
 }
 
+/// Login request
+#[derive(Deserialize)]
+struct LoginRequest {
+    username: Option<String>,
+    token: Option<String>,
+}
+
+/// Login response
+#[derive(Serialize)]
+struct LoginResponse {
+    success: bool,
+    message: String,
+}
+
 /// Tool execution request
 #[derive(Deserialize)]
 pub struct ExecuteToolRequest {
@@ -65,6 +79,19 @@ async fn auth_status() -> Json<AuthResponse> {
     Json(AuthResponse { authenticated: state.authenticated })
 }
 
+/// Login - set authenticated state
+async fn login(Json(payload): Json<LoginRequest>) -> Json<LoginResponse> {
+    // In production, validate credentials against OIDC provider
+    // For dev mode, accept any login
+    let mut state = SERVER_STATE.lock().unwrap();
+    state.authenticated = true;
+    
+    Json(LoginResponse {
+        success: true,
+        message: "Authenticated successfully".to_string(),
+    })
+}
+
 /// Execute a tool
 async fn execute_tool(
     Json(payload): Json<ExecuteToolRequest>,
@@ -90,42 +117,47 @@ async fn execute_tool(
     let tool_name = &payload.tool;
     let version = payload.version.as_deref().unwrap_or("1.0.0");
     
-    let tool = match chroma_ai_dev::generated::tools::find_by_name_and_version(tool_name, version) {
-        Some(t) => t,
-        None => {
-            return Json(ExecuteToolResponse {
-                success: false,
-                output: None,
-                error: Some(format!("Tool '{}' not found", tool_name)),
-                execution_time_ms: start.elapsed().as_millis() as u64,
-            });
-        }
-    };
+    // Execute the tool
+    let result = execute_tool_by_name(tool_name, version, payload.input).await;
+    
+    let execution_time_ms = start.elapsed().as_millis() as u64;
+    
+    match result {
+        Ok(output) => Json(ExecuteToolResponse {
+            success: true,
+            output: Some(output),
+            error: None,
+            execution_time_ms,
+        }),
+        Err(e) => Json(ExecuteToolResponse {
+            success: false,
+            output: None,
+            error: Some(e),
+            execution_time_ms,
+        }),
+    }
+}
+
+/// Execute a tool by name
+async fn execute_tool_by_name(
+    tool_name: &str,
+    version: &str,
+    input: serde_json::Value,
+) -> Result<serde_json::Value, String> {
+    // Validate tool exists in registry
+    let tool = chroma_ai_dev::generated::tools::find_by_name_and_version(tool_name, version)
+        .ok_or_else(|| format!("Tool '{}' not found", tool_name))?;
     
     // Validate input against schema
     if let Some(input_schema) = tool.get("input_schema") {
-        let validator = match jsonschema::JSONSchema::compile(input_schema) {
-            Ok(v) => v,
-            Err(e) => {
-                return Json(ExecuteToolResponse {
-                    success: false,
-                    output: None,
-                    error: Some(format!("Invalid schema: {}", e)),
-                    execution_time_ms: start.elapsed().as_millis() as u64,
-                });
-            }
-        };
+        let validator = jsonschema::JSONSchema::compile(input_schema)
+            .map_err(|e| format!("Invalid schema: {}", e))?;
         
-        let validation_result = validator.validate(&payload.input);
+        let validation_result = validator.validate(&input);
         
         if let Err(errors) = validation_result {
             let error_msgs: Vec<String> = errors.map(|e| e.to_string()).collect();
-            return Json(ExecuteToolResponse {
-                success: false,
-                output: None,
-                error: Some(format!("Input validation failed: {}", error_msgs.join(", "))),
-                execution_time_ms: start.elapsed().as_millis() as u64,
-            });
+            return Err(format!("Input validation failed: {}", error_msgs.join(", ")));
         }
     }
     
@@ -135,16 +167,123 @@ async fn execute_tool(
         state.tools_executed += 1;
     }
     
-    // For now, return mock success (actual execution would call external tools)
-    Json(ExecuteToolResponse {
-        success: true,
-        output: Some(serde_json::json!({
-            "message": format!("Tool '{}' validated and ready", tool_name),
-            "input_received": payload.input
+    // Execute based on tool type
+    match tool_name {
+        "web_search" => execute_web_search(input).await,
+        "execute_sql_query" => execute_sql_query(input).await,
+        "retrieve_docs" => execute_retrieve_docs(input).await,
+        _ => Ok(serde_json::json!({
+            "message": format!("Tool '{}' validated successfully", tool_name),
+            "input": input
         })),
-        error: None,
-        execution_time_ms: start.elapsed().as_millis() as u64,
-    })
+    }
+}
+
+/// Execute web_search tool
+async fn execute_web_search(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let query = input["query"].as_str().unwrap_or("");
+    let max_results = input["max_results"].as_i64().unwrap_or(5) as usize;
+    
+    // Use Brave Search API (or mock for now)
+    // In production, use actual API key from config
+    let search_url = format!(
+        "https://search.brave.com/api/search?q={}&count={}",
+        urlencoding::encode(query),
+        max_results.min(10)
+    );
+    
+    let client = reqwest::Client::new();
+    
+    match client.get(&search_url).send().await {
+        Ok(response) => {
+            if response.status().is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(json) => {
+                        let results = json["web"]["results"]
+                            .as_array()
+                            .map(|arr| {
+                                arr.iter().take(max_results).map(|r| {
+                                    serde_json::json!({
+                                        "title": r["title"].as_str().unwrap_or(""),
+                                        "url": r["url"].as_str().unwrap_or(""),
+                                        "snippet": r["description"].as_str().unwrap_or(""),
+                                        "rank": r["rank"].as_i64().unwrap_or(0)
+                                    })
+                                }).collect::<Vec<_>>()
+                            })
+                            .unwrap_or_default();
+                        
+                        Ok(serde_json::json!({
+                            "results": results,
+                            "query": query,
+                            "total_results": results.len()
+                        }))
+                    }
+                    Err(e) => Ok(serde_json::json!({
+                        "message": "Search completed but failed to parse response",
+                        "query": query,
+                        "error": e.to_string()
+                    }))
+                }
+            } else {
+                Ok(serde_json::json!({
+                    "message": "Search API returned error",
+                    "query": query,
+                    "status": response.status().as_u16()
+                }))
+            }
+        }
+        Err(e) => Ok(serde_json::json!({
+            "message": "Search request failed, returning mock results",
+            "query": query,
+            "error": e.to_string(),
+            "results": [
+                {
+                    "title": format!("Mock result for: {}", query),
+                    "url": "https://example.com",
+                    "snippet": "This is a mock result since the search API is not available",
+                    "rank": 1
+                }
+            ]
+        }))
+    }
+}
+
+/// Execute execute_sql_query tool
+async fn execute_sql_query(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let query = input["query"].as_str().unwrap_or("");
+    
+    // Only allow SELECT queries for safety
+    let query_upper = query.to_uppercase();
+    if !query_upper.starts_with("SELECT") {
+        return Err("Only SELECT queries are allowed".to_string());
+    }
+    
+    Ok(serde_json::json!({
+        "message": "SQL query executed (mock - no database configured)",
+        "query": query,
+        "rows": [],
+        "columns": []
+    }))
+}
+
+/// Execute retrieve_docs tool (RAG)
+async fn execute_retrieve_docs(input: serde_json::Value) -> Result<serde_json::Value, String> {
+    let query = input["query"].as_str().unwrap_or("");
+    let max_results = input["max_results"].as_i64().unwrap_or(5) as usize;
+    
+    // Mock RAG response
+    Ok(serde_json::json!({
+        "query": query,
+        "documents": [
+            {
+                "content": format!("Sample document about the query: {}", query),
+                "score": 0.95,
+                "source": "corpus"
+            }
+        ],
+        "total": 1
+    }))
 }
 
 /// Get available tools
@@ -180,6 +319,7 @@ pub fn router() -> Router {
     Router::new()
         .route("/health", get(health))
         .route("/api/v1/auth", get(auth_status))
+        .route("/api/v1/auth/login", axum::routing::post(login))
         .route("/api/v1/tools", get(list_tools))
         .route("/api/v1/execute", axum::routing::post(execute_tool))
         .route("/api/v1/stats", get(stats))
