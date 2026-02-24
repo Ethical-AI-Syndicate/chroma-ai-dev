@@ -32,6 +32,7 @@ pub mod agent_mail;
 pub mod docs_generation;
 pub mod evals;
 pub mod generated;
+pub mod lsp_manager;
 pub mod modes;
 pub mod orchestrator;
 pub mod prompts;
