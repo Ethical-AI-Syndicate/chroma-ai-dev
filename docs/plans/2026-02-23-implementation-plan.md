@@ -789,7 +789,7 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 
 **Phase 4:**
 - [x] Multi-version support working
-- [ ] Migration guides for all breaking changes
+- [x] Migration guides for all breaking changes
 - [x] Deprecation warnings functional
 
 **Phase 5:**
@@ -813,7 +813,7 @@ pub async fn run_eval_suite(suite: &EvalSuite) -> EvalRunResult {
 - [x] Phase 5: Authoring guide + schema linting + HTML docs generation
 
 **Next Steps:**
-1. ~~Add migration guides for each future breaking schema release (Phase 4 hardening)~~
+1. ✅ Add migration guides infrastructure (Phase 4 hardening) - COMPLETE 2026-02-24
 2. ~~Validate CI run status on PR and mark CI metric complete when green in GitHub Actions~~ ✅ CI added
 3. ~~Decide whether to keep generated-file rustfmt in build.rs or replace with stable formatting strategy~~
 

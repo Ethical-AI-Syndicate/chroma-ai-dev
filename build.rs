@@ -25,6 +25,7 @@ fn main() {
     println!("cargo:rerun-if-changed=docs/schemas/agent-config-schema.json");
     println!("cargo:rerun-if-changed=docs/schemas/mcp-server-schema.json");
     println!("cargo:rerun-if-changed=docs/schemas/claude-config-schema.json");
+    println!("cargo:rerun-if-changed=docs/migration-guides/");
 
     let tools = extract_and_validate("TOOLS.md", "tool", "docs/schemas/tool-schema.json")
         .expect("failed to process TOOLS.md");
@@ -53,6 +54,16 @@ fn main() {
 
     validate_cross_references(&prompts, &evals, &claude_configs)
         .expect("cross-reference validation failed");
+
+    validate_migration_guides(
+        &tools,
+        &prompts,
+        &evals,
+        &agents,
+        &mcp_servers,
+        &claude_configs,
+    )
+    .expect("migration guide validation failed");
 
     generate_modules(
         Path::new("src/generated"),
@@ -297,6 +308,93 @@ fn validate_cross_references(
         }
     }
 
+    Ok(())
+}
+
+fn validate_migration_guides(
+    tools: &[SchemaBlock],
+    prompts: &[SchemaBlock],
+    evals: &[SchemaBlock],
+    agents: &[SchemaBlock],
+    mcp_servers: &[SchemaBlock],
+    claude_configs: &[SchemaBlock],
+) -> Result<(), String> {
+    let migration_guides_dir = Path::new("docs/migration-guides");
+    if !migration_guides_dir.exists() {
+        println!("cargo:warning=no migration-guides directory found - skipping migration guide validation");
+        return Ok(());
+    }
+
+    let schema_types = [
+        ("tool", tools),
+        ("prompt", prompts),
+        ("eval", evals),
+        ("agent", agents),
+        ("mcp-server", mcp_servers),
+        ("claude-config", claude_configs),
+    ];
+
+    for (schema_type, schemas) in schema_types.iter() {
+        for schema in *schemas {
+            let value: Value = serde_yaml::from_str(&schema.content).map_err(|err| {
+                format!(
+                    "{}:{}: failed to parse schema: {}",
+                    schema.source_file, schema.line_number, err
+                )
+            })?;
+
+            let id = value
+                .get("name")
+                .or_else(|| value.get("id"))
+                .or_else(|| value.get("suite_id"))
+                .and_then(Value::as_str)
+                .unwrap_or("unknown");
+
+            let version = value
+                .get("version")
+                .and_then(Value::as_str)
+                .unwrap_or("0.0.0");
+            let is_deprecated = value
+                .get("deprecated")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let deprecated_versions = value
+                .get("deprecated_versions")
+                .and_then(Value::as_array)
+                .map(|arr| arr.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+                .unwrap_or_default();
+            let migration_guide = value.get("migration_guide").and_then(Value::as_str);
+
+            if is_deprecated {
+                println!(
+                    "cargo:warning={} '{}' v{} is deprecated",
+                    schema_type, id, version
+                );
+            }
+
+            for deprecated_ver in &deprecated_versions {
+                let guide_path = format!(
+                    "docs/migration-guides/{}-{}-{}.md",
+                    schema_type, id, deprecated_ver
+                );
+                if !Path::new(&guide_path).exists() {
+                    if migration_guide.is_none() {
+                        println!(
+                            "cargo:warning={} '{}' v{} is deprecated but no migration guide found at {}",
+                            schema_type, id, deprecated_ver, guide_path
+                        );
+                    }
+                } else {
+                    println!(
+                        "cargo:warning=migration guide found for deprecated {} '{}' v{}",
+                        schema_type, id, deprecated_ver
+                    );
+                }
+            }
+        }
+    }
+
+    println!("cargo:warning=migration guide validation complete");
     Ok(())
 }
 

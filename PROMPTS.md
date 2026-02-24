@@ -592,6 +592,8 @@ id: legacy-assistant
 version: "1.0.0"
 type: system
 description: Legacy assistant prompt maintained temporarily for migration compatibility
+deprecated: true
+migration_guide: docs/migration-guides/prompt-legacy-assistant-1.0.0.md
 template: |
   You are the legacy assistant behavior profile.
   Keep responses concise and include a migration notice.
