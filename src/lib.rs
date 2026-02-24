@@ -3,6 +3,9 @@
 
 //! ChromaAI Dev - Terminal-first AI development, evaluation, and release tool
 //!
+//! **The application is ChromaTUI.** Without ChromaTUI there is no application; the TUI is the
+//! foundation everything else is built on.
+//!
 //! This library provides the core functionality for ChromaAI Dev, including:
 //! - Schema validation and code generation (from markdown files)
 //! - Tool execution and validation
@@ -13,7 +16,7 @@
 //! ## Architecture
 //!
 //! ChromaAI Dev follows a thin-client architecture:
-//! - **Client**: TUI/CLI for user interaction, validates for UX
+//! - **Client**: ChromaTUI (the application surface); validates for UX
 //! - **Control Plane**: Server-side policy enforcement, artifact storage, audit logging
 //! - **Execution Plane**: Provider gateways, tool execution, retrieval services
 //!
@@ -28,7 +31,11 @@
 pub mod config;
 =======
 pub mod agent_mail;
+<<<<<<< HEAD
 >>>>>>> d2125b5 (feat(agent-mail): add mailbox threads and file lease coordination)
+=======
+pub mod control_plane;
+>>>>>>> 97c1928 (feat(control-plane): enforce policy budget and audit across advanced runtime)
 pub mod docs_generation;
 pub mod evals;
 pub mod generated;
@@ -38,6 +45,7 @@ pub mod orchestrator;
 pub mod prompts;
 pub mod schema_lint;
 pub mod terminal_safety;
+pub mod tickets;
 pub mod tools;
 pub mod versioning;
 
@@ -70,6 +78,9 @@ pub mod error {
 
         #[error("Network error: {0}")]
         Network(#[from] reqwest::Error),
+
+        #[error("Ticket error: {0}")]
+        Ticket(#[from] crate::tickets::TicketError),
 
         #[error(transparent)]
         Other(#[from] anyhow::Error),
